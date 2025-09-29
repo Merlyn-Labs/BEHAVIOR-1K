@@ -43,6 +43,7 @@ from omnigibson.utils.python_utils import recursively_convert_to_torch
 from pathlib import Path
 from signal import signal, SIGINT
 from typing import Any, Tuple, List
+from tqdm import tqdm
 
 m = create_module_macros(module_path=__file__)
 m.NUM_EVAL_EPISODES = 1
@@ -79,9 +80,13 @@ class Evaluator:
         self.robot_action = dict()
 
         self.env = self.load_env(env_wrapper=self.cfg.env_wrapper)
+        logger.info("Env fully loaded")
         self.policy = self.load_policy()
+        logger.info("Policy fully loaded")
         self.robot = self.load_robot()
+        logger.info("Robot fully loaded")
         self.metrics = self.load_metrics()
+        logger.info("Metrics fully loaded")
 
         self.reset()
         # manually reset environment episode number
@@ -139,6 +144,7 @@ class Evaluator:
         cfg["robots"][0]["proprio_obs"] = list(PROPRIOCEPTION_INDICES["R1Pro"].keys())
         if self.cfg.robot.controllers is not None:
             cfg["robots"][0]["controller_config"].update(self.cfg.robot.controllers)
+
         if self.cfg.max_steps is None:
             logger.info(
                 f"Setting timeout to be 2x the average length of human demos: {int(self.human_stats['length'] * 2)}"
@@ -147,6 +153,7 @@ class Evaluator:
         else:
             logger.info(f"Setting timeout to be {self.cfg.max_steps} steps through config.")
             cfg["task"]["termination_config"]["max_steps"] = self.cfg.max_steps
+
         cfg["task"]["include_obs"] = False
         env = og.Environment(configs=cfg)
         # instantiate env wrapper
@@ -201,6 +208,8 @@ class Evaluator:
             6. Returns the termination and truncation status.
         """
         self.robot_action = self.policy.forward(obs=self.obs)
+        # self.robot_action = th.zeros(self.robot.action_dim, dtype=th.float32)
+        # self.robot_action[2] = 1.0
 
         obs, _, terminated, truncated, info = self.env.step(self.robot_action, n_render_iterations=1)
         # process obs
@@ -423,7 +432,8 @@ if __name__ == "__main__":
     with Evaluator(config) as evaluator:
         logger.info("Starting evaluation...")
 
-        for idx in instances_to_run:
+        # Add tqdm for the number of instances_to_run
+        for idx in tqdm(instances_to_run, desc="Instances"):
             evaluator.reset()
             evaluator.load_task_instance(idx)
             logger.info(f"Starting task instance {idx} for evaluation...")
@@ -439,14 +449,24 @@ if __name__ == "__main__":
                 # run metric start callbacks
                 for metric in evaluator.metrics:
                     metric.start_callback(evaluator.env)
-                while not done:
-                    terminated, truncated = evaluator.step()
-                    if terminated or truncated:
-                        done = True
-                    if config.write_video:
-                        evaluator._write_video()
-                    if evaluator.env._current_step % 1000 == 0:
-                        logger.info(f"Current step: {evaluator.env._current_step}")
+                # Get max_steps for tqdm progress bar
+                try:
+                    max_steps = evaluator.env.task.termination_config["max_steps"]
+                except Exception:
+                    max_steps = 500  # fallback if not found
+                # tqdm for steps in the episode
+                with tqdm(total=max_steps, desc=f"Instance {idx} Ep {epi}", leave=False) as pbar:
+                    step_count = 0
+                    while not done:
+                        terminated, truncated = evaluator.step()
+                        if terminated or truncated:
+                            done = True
+                        if config.write_video:
+                            evaluator._write_video()
+                        if evaluator.env._current_step % 1000 == 0:
+                            logger.info(f"Current step: {evaluator.env._current_step}")
+                        step_count += 1
+                        pbar.update(1)
                 # run metric end callbacks
                 for metric in evaluator.metrics:
                     metric.end_callback(evaluator.env)

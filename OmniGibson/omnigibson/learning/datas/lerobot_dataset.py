@@ -121,6 +121,9 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         self.root.mkdir(exist_ok=True, parents=True)
 
+        # Caches for per-episode sidecar files
+        self._skill_prompts_cache = {}
+
         # ========== Customizations ==========
         self.seed = seed
         if modalities is None:
@@ -298,7 +301,13 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
     def __getitem__(self, idx) -> dict:
         if not self._chunk_streaming_using_keyframe:
-            return super().__getitem__(idx)
+            item = super().__getitem__(idx)
+            ep_idx = item["episode_index"].item()
+            # Attach per-episode skill prompts (lazy, cached, optional)
+            skill_prompts = self._load_episode_skill_prompts(ep_idx)
+            if skill_prompts is not None:
+                item["skill_prompts"] = skill_prompts
+            return item
         # Streaming mode: we will load the episode at the current streaming index, and then increment the index for next call
         # Randomize chunk index on first call
         if self.current_streaming_chunk_idx is None:
@@ -372,9 +381,34 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         # Add task as a string
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
+
+        # Attach per-episode skill prompts (lazy, cached, optional)
+        skill_prompts = self._load_episode_skill_prompts(ep_idx)
+        if skill_prompts is not None:
+            item["skill_prompts"] = skill_prompts
+
         self.current_streaming_frame_idx += 1
 
         return item
+
+    def _load_episode_skill_prompts(self, ep_idx: int) -> list[dict] | None:
+        """
+        Lazy-load and cache per-episode skill prompts based on skill prompts
+        Returns skill_prompts_list or None
+        """
+
+        if ep_idx not in self._skill_prompts_cache:
+            skill_prompts = None
+            try:
+                skill_prompts_path = self.root / self.meta.get_skill_prompts_path(ep_idx)
+                if skill_prompts_path.is_file():
+                    with open(skill_prompts_path, "r") as f:
+                        skill_prompts = json.load(f)
+            except (KeyError, FileNotFoundError, json.JSONDecodeError):
+                skill_prompts = None
+            self._skill_prompts_cache[ep_idx] = skill_prompts
+
+        return self._skill_prompts_cache[ep_idx]
 
     def _get_query_indices(self, idx: int, ep_idx: int) -> tuple[dict[str, list[int | bool]]]:
         ep_idx = self.episode_data_index_pos[ep_idx]
@@ -527,6 +561,11 @@ class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
         fpath = self.annotation_path.format(episode_chunk=ep_chunk, episode_index=ep_index)
         return Path(fpath)
 
+    def get_skill_prompts_path(self, ep_index: int) -> Path:
+        ep_chunk = self.get_episode_chunk(ep_index)
+        fpath = self.skill_prompts_path.format(episode_chunk=ep_chunk, episode_index=ep_index)
+        return Path(fpath)
+
     def get_metainfo_path(self, ep_index: int) -> Path:
         ep_chunk = self.get_episode_chunk(ep_index)
         fpath = self.metainfo_path.format(episode_chunk=ep_chunk, episode_index=ep_index)
@@ -541,6 +580,13 @@ class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
     def metainfo_path(self) -> str | None:
         """Formattable string for the metainfo files."""
         return self.info["metainfo_path"]
+
+    @property
+    def skill_prompts_path(self) -> str | None:
+        """Formattable string for the skill prompts files."""
+        if self.info["annotation_path"] is not None:
+            return self.info["annotation_path"].replace("annotations/", "skill_prompts/")
+        return None
 
     @property
     def features(self) -> dict[str, dict]:

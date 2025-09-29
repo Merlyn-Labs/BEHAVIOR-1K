@@ -50,7 +50,6 @@ class Environment(gym.Env, GymObservable, Recreatable):
         """
         # Call super first
         super().__init__()
-
         # Required render mode metadata for gymnasium
         self.render_mode = "rgb_array"
         self.metadata = {"render.modes": ["rgb_array"]}
@@ -108,6 +107,7 @@ class Environment(gym.Env, GymObservable, Recreatable):
                 viewer_width=viewer_width,
                 viewer_height=viewer_height,
             )
+            print("Simulator launched")
 
         # Initialize other placeholders that will be filled in later
         self._task = None
@@ -429,10 +429,15 @@ class Environment(gym.Env, GymObservable, Recreatable):
 
         # Load the scene, robots, and task
         self._load_scene()
+        print("Scene loaded")
         self._load_objects()
+        print("Objects loaded")
         self._load_robots()
+        print("Robots loaded")
         self._load_task()
+        print("Task loaded")
         self._load_external_sensors()
+        print("External sensors loaded")
 
     def post_play_load(self):
         """Complete loading tasks that require the simulator to be playing."""
