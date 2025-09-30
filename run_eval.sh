@@ -11,4 +11,4 @@ conda activate behavior
 time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
     policy=local \
     task.name=turning_on_radio \
-    log_path="pi05_8000" \
+    log_notes=""

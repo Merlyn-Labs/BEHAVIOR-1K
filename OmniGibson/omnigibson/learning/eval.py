@@ -385,9 +385,18 @@ if __name__ == "__main__":
     OmegaConf.resolve(config)
     # set headless mode
     gm.HEADLESS = config.headless
+
+    # Extract the checkpoint name from policy_dir and append log_notes
+    policy_dir = config.model.policy_dir
+    policy_dir_name = os.path.basename(os.path.normpath(policy_dir))
+    parent_dir_name = os.path.basename(os.path.dirname(os.path.normpath(policy_dir)))
+    log_path = f"{parent_dir_name}_{policy_dir_name}"
+    if config.log_notes:
+        log_path += f"_{config.log_notes}"
+
     # set video path
     if config.write_video:
-        video_path = Path(config.log_path).expanduser() / "videos"
+        video_path = Path(log_path).expanduser() / "videos"
         video_path.mkdir(parents=True, exist_ok=True)
     # get run instances
     if config.eval_on_train_instances:
@@ -426,7 +435,7 @@ if __name__ == "__main__":
         instances_to_run = [int(test_instances[i]) for i in instances_to_run]
     # establish metrics
     metrics = {}
-    metrics_path = Path(config.log_path).expanduser() / "metrics"
+    metrics_path = Path(log_path).expanduser() / "metrics"
     metrics_path.mkdir(parents=True, exist_ok=True)
 
     with Evaluator(config) as evaluator:
