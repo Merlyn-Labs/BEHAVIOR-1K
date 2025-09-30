@@ -8,3 +8,4 @@ outputs/
 /*.ipynb
 pi0**
 policy_records/
+openpi_**
