@@ -4,7 +4,7 @@ from typing import Optional
 
 from omnigibson.learning.utils.array_tensor_utils import torch_to_numpy
 from omnigibson.learning.utils.network_utils import WebsocketClientPolicy
-from omnigibson.learning.datas import BehaviorLerobotDatasetMetadata
+from omnigibson.learning.datas import BehaviorLerobotDatasetMetadata, BehaviorLeRobotDataset
 
 from openpi.policies import policy as _policy
 from openpi.policies import policy_config as _policy_config
@@ -75,6 +75,9 @@ class LocalPolicy:
         if self.policy is not None:
             self.policy.reset()
 
+    def set_task_instance(self, idx: int) -> None:
+        pass
+
 
 class WebsocketPolicy:
     """
@@ -98,3 +101,61 @@ class WebsocketPolicy:
 
     def reset(self) -> None:
         self.policy.reset()
+
+    def set_task_instance(self, idx: int) -> None:
+        pass
+
+
+class LookupPolicy:
+    """
+    Lookup policy that looks up the correct action from a lookup table.
+
+    Only for training set episodes.
+    """
+
+    def __init__(
+        self,
+        *args,
+        policy_config: Optional[str] = None,
+        task_name: Optional[str] = None,
+        **kwargs
+    ) -> None:
+        config = _config.get_config(policy_config)
+        data_config = config.data.create(config.assets_dirs, config.model)
+        self.dataset = iter(
+            BehaviorLeRobotDataset(
+                repo_id=data_config.repo_id,
+                root=data_config.behavior_dataset_root,
+                tasks=[task_name],
+                modalities=["rgb"],
+                local_only=False,
+                delta_timestamps={
+                    key: [t / 30.0 for t in range(config.model.action_horizon)] for key in data_config.action_sequence_keys
+                },
+                episodes=list(range(190)),
+                chunk_streaming_using_keyframe=True,
+                shuffle=False,
+            )
+        )
+        self.task_instance = None
+        self.current_datapoint = None
+
+    def forward(self, obs: dict, *args, **kwargs) -> th.Tensor:
+        # We use 0 as the index because the index is irrelevant when chunk_streaming_using_keyframe=True
+        curr_datapoint = self.current_datapoint
+
+        # Update the current datapoint for the next call
+        self.current_datapoint = next(self.dataset)
+
+        return curr_datapoint["action"][0]
+
+    def reset(self) -> None:
+        self.task_instance = None
+        self.current_datapoint = None
+
+    def set_task_instance(self, idx: str) -> None:
+        self.task_instance = idx
+        self.current_datapoint = next(self.dataset)
+        while str(int((self.current_datapoint["episode_index"] // 10) % 1e3)) != idx:
+            print(f"[Seeking task instance {idx}], skipping episode_index={self.current_datapoint['episode_index']}, index={self.current_datapoint['index']}")
+            self.current_datapoint = next(self.dataset)

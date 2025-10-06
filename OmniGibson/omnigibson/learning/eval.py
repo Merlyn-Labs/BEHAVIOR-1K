@@ -47,7 +47,7 @@ from tqdm import tqdm
 
 m = create_module_macros(module_path=__file__)
 m.NUM_EVAL_EPISODES = 1
-m.NUM_TRAIN_INSTANCES = 200
+m.NUM_TRAIN_INSTANCES = 4
 m.NUM_EVAL_INSTANCES = 3
 
 
@@ -79,10 +79,10 @@ class Evaluator:
         self.total_time = 0
         self.robot_action = dict()
 
-        self.env = self.load_env(env_wrapper=self.cfg.env_wrapper)
-        logger.info("Env fully loaded")
         self.policy = self.load_policy()
         logger.info("Policy fully loaded")
+        self.env = self.load_env(env_wrapper=self.cfg.env_wrapper)
+        logger.info("Env fully loaded")
         self.robot = self.load_robot()
         logger.info("Robot fully loaded")
         self.metrics = self.load_metrics()
@@ -173,6 +173,9 @@ class Evaluator:
         """
         Loads and returns the policy instance.
         """
+        if self.cfg.policy_name == "lookup" and not self.cfg.eval_on_train_instances:
+            raise ValueError("Lookup policy is only supported for training instances.")
+
         policy = instantiate({
             **self.cfg.model,
             "task_name": self.cfg.task.name,
@@ -413,6 +416,8 @@ if __name__ == "__main__":
             episodes = [json.loads(line) for line in f]
         instances_to_run = []
         for episode in episodes:
+            if len(instances_to_run) >= m.NUM_TRAIN_INSTANCES:
+                break
             if episode["episode_index"] // 1e4 == task_idx:
                 instances_to_run.append(str(int((episode["episode_index"] // 10) % 1e3)))
                 if config.eval_instance_ids:
@@ -453,6 +458,7 @@ if __name__ == "__main__":
             logger.info(f"Starting task instance {idx} for evaluation...")
             for epi in range(m.NUM_EVAL_EPISODES):
                 evaluator.reset()
+                evaluator.policy.set_task_instance(idx)
                 done = False
                 if config.write_video:
                     video_name = str(video_path) + f"/{config.task.name}_{idx}_{epi}.mp4"
