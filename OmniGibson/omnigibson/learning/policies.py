@@ -1,4 +1,7 @@
+import json
 import logging
+import os
+import pickle
 import torch as th
 from typing import Optional
 
@@ -15,6 +18,16 @@ __all__ = [
     "LocalPolicy",
     "WebsocketPolicy",
 ]
+
+
+def save_pickle(obj, path):
+    with open(path, "wb") as f:
+        pickle.dump(obj, f)
+
+
+def save_json(obj, path):
+    with open(path, "w") as f:
+        json.dump(obj, f)
 
 
 def load_policy(policy_config: str, policy_dir: str, task_name: str):
@@ -66,7 +79,11 @@ class LocalPolicy:
         Directly return a zero action tensor of the specified action dimension.
         """
         if self.policy is not None:
-            return self.policy.act(obs).detach().cpu()
+            out_path = f"./action_out_v2/{self.task_instance}/{self.step_count}.json"
+            out = self.policy.act(obs).detach().cpu()[0]
+            save_json(out.tolist(), out_path)
+            self.step_count += 1
+            return out
         else:
             assert self.action_dim is not None
             return th.zeros(self.action_dim, dtype=th.float32)
@@ -74,9 +91,12 @@ class LocalPolicy:
     def reset(self) -> None:
         if self.policy is not None:
             self.policy.reset()
+        self.task_instance = None
+        self.step_count = 0
 
-    def set_task_instance(self, idx: int) -> None:
-        pass
+    def set_task_instance(self, idx: str) -> None:
+        self.task_instance = idx
+        os.makedirs(f"./action_out_v2/{self.task_instance}", exist_ok=True)
 
 
 class WebsocketPolicy:
@@ -97,12 +117,14 @@ class WebsocketPolicy:
     def forward(self, obs: dict, *args, **kwargs) -> th.Tensor:
         # convert observation to numpy
         obs = torch_to_numpy(obs)
-        return self.policy.act(obs).detach().cpu()
+        out = self.policy.act(obs).detach().cpu()
+        print(out.shape)
+        return out
 
     def reset(self) -> None:
         self.policy.reset()
 
-    def set_task_instance(self, idx: int) -> None:
+    def set_task_instance(self, idx: str) -> None:
         pass
 
 

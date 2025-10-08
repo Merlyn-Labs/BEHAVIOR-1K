@@ -8,7 +8,6 @@ eval "$(conda shell.bash hook)"
 conda deactivate
 conda activate behavior
 
-
 # time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
 #     policy=local \
 #     task.name=turning_on_radio \
@@ -18,12 +17,13 @@ conda activate behavior
 #     policy_dir=/workspace/openpi/outputs/checkpoints/pi0_b1k/openpi_0_20251005_045853/46000/
 
 time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-    policy=lookup \
+    policy=websocket \
     task.name=turning_on_radio \
     eval_on_train_instances=true \
-    log_notes="training_lookup" \
-    policy_config=pi0_b1k \
-    policy_dir=/workspace/openpi/outputs/checkpoints/pi0_b1k/openpi_0_20251005_045853/46000/
+    log_notes="training_but_get_0th_index_websockets" \
+    policy_config=pi05_b1k \
+    max_steps=1500 \
+    policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20250929_205856/49999/
 
 # time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
 #     policy=local \
