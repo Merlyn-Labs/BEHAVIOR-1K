@@ -241,9 +241,36 @@ class BehaviorLeRobotDataset(LeRobotDataset):
     def download_episodes(self, download_videos: bool = True) -> None:
         """
         Overwrite base method to allow more flexible pattern matching.
-        Here, we do coarse filtering based on tasks, cameras, and modalities.
-        We do this instead of filename patterns to speed up pattern checking and download speed.
+        If specific episodes are selected (self.episodes), restrict download to only those
+        episode files (data, metainfo, per-episode meta) and, optionally, their videos.
+        Otherwise, do coarse filtering based on tasks, cameras, and modalities.
         """
+        # If specific episodes are provided, download only files for those episodes
+        if self.episodes is not None:
+            if len(self.episodes) == 0:
+                # Nothing to download
+                return
+
+            allow_set = set()
+            for ep_idx in self.episodes:
+                # Data parquet for the episode
+                allow_set.add(str(self.meta.get_data_file_path(ep_idx)))
+                # Metainfo for the episode
+                allow_set.add(str(self.meta.get_metainfo_path(ep_idx)))
+                # Per-episode metadata JSON used for seg_instance_id ids and other info
+                task_id = ep_idx // 10000
+                allow_set.add(f"meta/episodes/task-{task_id:04d}/episode_{ep_idx:08d}.json")
+                # Videos for selected modalities/cameras, if requested
+                if download_videos:
+                    for vid_key in self.meta.video_keys:
+                        allow_set.add(str(self.meta.get_video_file_path(ep_idx, vid_key)))
+
+            allow_patterns = sorted(list(allow_set))
+            ignore_patterns = None if download_videos else ["videos/"]
+            self.pull_from_repo(allow_patterns=allow_patterns, ignore_patterns=ignore_patterns)
+            return
+
+        # Fallback: coarse filtering by tasks/modalities/cameras when episodes are not specified
         allow_patterns = []
         if set(self.task_indices) != set(TASK_NAMES_TO_INDICES.values()):
             for task in self.task_indices:
