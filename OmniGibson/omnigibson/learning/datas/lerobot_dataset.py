@@ -253,7 +253,14 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         # Filter by tasks
         if set(self.task_indices) != set(TASK_NAMES_TO_INDICES.values()):
             for task in self.task_indices:
-                allow_patterns.append(f"**/task-{task:04d}/**")
+                if self.episodes is not None:
+                    for ep_idx in self.episodes:
+                        task_id = ep_idx // 10000
+                        if task_id == task:
+                            allow_patterns.append(f"**/task-{task:04d}/**/episode_{ep_idx:08d}.*")
+                            allow_patterns.append(f"**/task-{task:04d}/episode_{ep_idx:08d}.*")
+                else:
+                    allow_patterns.append(f"**/task-{task:04d}/**")
             for task in set(TASK_NAMES_TO_INDICES.values()).difference(self.task_indices):
                 ignore_patterns.append(f"**/task-{task:04d}/**")
 
@@ -262,21 +269,15 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         all_modalities = MODALITY_NAMES
         unused_modalities = all_modalities - used_modalities
 
-        # Allow only the requested modalities/cameras
-        if len(self.meta.modalities) != 3:
-            for modality in self.meta.modalities:
-                if len(self.meta.camera_names) != 3:
-                    for camera in self.meta.camera_names:
-                        allow_patterns.append(f"**/observation.images.{modality}.{camera}/**")
-                else:
-                    allow_patterns.append(f"**/observation.images.{modality}.*/**")
-        elif len(self.meta.camera_names) != 3:
-            for camera in self.meta.camera_names:
-                allow_patterns.append(f"**/observation.images.*.{camera}/**")
-
         # Ignore unused modalities entirely
         for modality in unused_modalities:
             ignore_patterns.append(f"**/observation.images.{modality}.*/**")
+
+        all_camera_names = set(ROBOT_CAMERA_NAMES["R1Pro"])
+        used_camera_names = set(self.meta.camera_names)
+        unused_camera_names = all_camera_names - used_camera_names
+        for camera in unused_camera_names:
+            ignore_patterns.append(f"**/observation.images.*.{camera}/**")
 
         # Ignore video files when requested
         if not download_videos:
