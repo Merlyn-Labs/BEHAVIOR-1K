@@ -260,6 +260,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                             allow_patterns.append(f"**/task-{task:04d}/**/episode_{ep_idx:08d}.*")
                             allow_patterns.append(f"**/task-{task:04d}/episode_{ep_idx:08d}.*")
                 else:
+                    assert False, "Episodes are not specified, so we cannot download the entire task. This is an outstanding TODO"
                     allow_patterns.append(f"**/task-{task:04d}/**")
             for task in set(TASK_NAMES_TO_INDICES.values()).difference(self.task_indices):
                 ignore_patterns.append(f"**/task-{task:04d}/**")
