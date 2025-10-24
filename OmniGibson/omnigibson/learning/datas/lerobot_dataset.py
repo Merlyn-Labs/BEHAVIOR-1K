@@ -40,6 +40,7 @@ from typing import Iterable, List, Tuple
 
 logger = create_module_logger("BehaviorLeRobotDataset")
 
+MODALITY_NAMES = {"rgb", "depth", "seg_instance_id"}
 
 class BehaviorLeRobotDataset(LeRobotDataset):
     """
@@ -245,36 +246,23 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         episode files (data, metainfo, per-episode meta) and, optionally, their videos.
         Otherwise, do coarse filtering based on tasks, cameras, and modalities.
         """
-        # If specific episodes are provided, download only files for those episodes
-        if self.episodes is not None:
-            if len(self.episodes) == 0:
-                # Nothing to download
-                return
-
-            allow_set = set()
-            for ep_idx in self.episodes:
-                # Data parquet for the episode
-                allow_set.add(str(self.meta.get_data_file_path(ep_idx)))
-                # Metainfo for the episode
-                allow_set.add(str(self.meta.get_metainfo_path(ep_idx)))
-                # Per-episode metadata JSON used for seg_instance_id ids and other info
-                task_id = ep_idx // 10000
-                allow_set.add(f"meta/episodes/task-{task_id:04d}/episode_{ep_idx:08d}.json")
-                # Videos for selected modalities/cameras, if requested
-                if download_videos:
-                    for vid_key in self.meta.video_keys:
-                        allow_set.add(str(self.meta.get_video_file_path(ep_idx, vid_key)))
-
-            allow_patterns = sorted(list(allow_set))
-            ignore_patterns = None if download_videos else ["videos/"]
-            self.pull_from_repo(allow_patterns=allow_patterns, ignore_patterns=ignore_patterns)
-            return
-
         # Fallback: coarse filtering by tasks/modalities/cameras when episodes are not specified
         allow_patterns = []
+        ignore_patterns = []
+
+        # Filter by tasks
         if set(self.task_indices) != set(TASK_NAMES_TO_INDICES.values()):
             for task in self.task_indices:
                 allow_patterns.append(f"**/task-{task:04d}/**")
+            for task in set(TASK_NAMES_TO_INDICES.values()).difference(self.task_indices):
+                ignore_patterns.append(f"**/task-{task:04d}/**")
+
+        # Filter by modalities/cameras for allow and ignore patterns
+        used_modalities = set(self.meta.modalities)
+        all_modalities = MODALITY_NAMES
+        unused_modalities = all_modalities - used_modalities
+
+        # Allow only the requested modalities/cameras
         if len(self.meta.modalities) != 3:
             for modality in self.meta.modalities:
                 if len(self.meta.camera_names) != 3:
@@ -285,12 +273,14 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         elif len(self.meta.camera_names) != 3:
             for camera in self.meta.camera_names:
                 allow_patterns.append(f"**/observation.images.*.{camera}/**")
-        ignore_patterns = []
+
+        # Ignore unused modalities entirely
+        for modality in unused_modalities:
+            ignore_patterns.append(f"**/observation.images.{modality}.*/**")
+
+        # Ignore video files when requested
         if not download_videos:
             ignore_patterns.append("videos/")
-        if set(self.task_indices) != set(TASK_NAMES_TO_INDICES.values()):
-            for task in set(TASK_NAMES_TO_INDICES.values()).difference(self.task_indices):
-                ignore_patterns.append(f"**/task-{task:04d}/**")
 
         allow_patterns = None if allow_patterns == [] else allow_patterns
         ignore_patterns = None if ignore_patterns == [] else ignore_patterns
@@ -511,7 +501,6 @@ class BehaviorLeRobotDataset(LeRobotDataset):
             offset += L
         return chunks
 
-
 class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
     """
     BehaviorLerobotDatasetMetadata extends LeRobotDatasetMetadata with the following customizations:
@@ -536,8 +525,8 @@ class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
         self.modalities = set(modalities)
         self.camera_names = set(cameras)
         assert self.modalities.issubset(
-            {"rgb", "depth", "seg_instance_id"}
-        ), f"Modalities must be a subset of ['rgb', 'depth', 'seg_instance_id'], but got {self.modalities}"
+            MODALITY_NAMES
+        ), f"Modalities must be a subset of {MODALITY_NAMES}, but got {self.modalities}"
         assert self.camera_names.issubset(
             ROBOT_CAMERA_NAMES["R1Pro"]
         ), f"Camera names must be a subset of {ROBOT_CAMERA_NAMES['R1Pro']}, but got {self.camera_names}"
