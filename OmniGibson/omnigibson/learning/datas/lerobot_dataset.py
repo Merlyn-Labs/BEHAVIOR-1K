@@ -37,6 +37,7 @@ from pathlib import Path
 from torch.utils.data import Dataset, get_worker_info
 from typing import Iterable, List, Tuple
 
+EPISODES_PROMPT_VARIANTS_PATH = "meta/episodes_prompt_variants.jsonl"
 
 logger = create_module_logger("BehaviorLeRobotDataset")
 
@@ -78,6 +79,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         chunk_streaming_using_keyframe: bool = True,
         shuffle: bool = True,
         seed: int = 42,
+        banned_skill_descriptions: list[str] | None = None,
     ):
         """
         Custom args:
@@ -103,6 +105,10 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 We also enforce that segmentation instance ID videos can only be loaded in chunk_streaming_using_keyframe mode for faster access.
             shuffle (bool): whether to shuffle the chunks after loading. This ONLY applies in chunk streaming mode. Recommended to be set to True for better randomness in chunk selection.
             seed (int): random seed for shuffling chunks.
+            banned_skill_descriptions (List[str]): list of skill descriptions to filter out at the frame level. 
+                For each episode, frames corresponding to skills with descriptions in this list will be excluded from the dataset.
+                If annotations cannot be read for an episode, that entire episode will be filtered out.
+                This filtering is applied at initialization and respects chunk streaming mode.
         """
         Dataset.__init__(self)
         self.repo_id = repo_id
@@ -128,6 +134,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         # ========== Customizations ==========
         self.seed = seed
+        self.banned_skill_descriptions = banned_skill_descriptions if banned_skill_descriptions is not None else []
         if modalities is None:
             modalities = ["rgb", "depth", "seg_instance_id"]
         if "seg_instance_id" in modalities:
@@ -165,6 +172,13 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 epi_by_task[task_id] = [epi_by_task[task_id][i] for i in episodes if i < len(epi_by_task[task_id])]
         # now put episodes back together
         self.episodes = sorted([ep for eps in epi_by_task.values() for ep in eps])
+        
+        # Apply frame-level filtering based on skill annotations if needed
+        # This must happen BEFORE creating chunks
+        self.valid_frame_mask = None
+        if self.banned_skill_descriptions:
+            self._build_frame_mask_and_filter_episodes()
+        
         # handle streaming mode and shuffling of episodes
         self._chunk_streaming_using_keyframe = chunk_streaming_using_keyframe
         if self._chunk_streaming_using_keyframe:
@@ -319,6 +333,13 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         hf_dataset.set_transform(hf_transform_to_torch)
         return hf_dataset
 
+    def __len__(self) -> int:
+        """Return the total number of frames available in the chunks."""
+        if self._chunk_streaming_using_keyframe:
+            # Sum up all chunk lengths
+            return sum(chunk_end - chunk_start for chunk_start, chunk_end, _ in self.chunks)
+        return len(self.hf_dataset)
+
     def __getitem__(self, idx) -> dict:
         if not self._chunk_streaming_using_keyframe:
             item = super().__getitem__(idx)
@@ -330,6 +351,8 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 item["skill_prompts"] = skill_prompts
             # if annotations is not None:
             #     item["annotations"] = annotations
+            if ep_idx in self.meta.episodes_prompt_variants:
+                item["prompt"] = self.meta.episodes_prompt_variants[ep_idx]
             return item
         # Streaming mode: we will load the episode at the current streaming index, and then increment the index for next call
         # Randomize chunk index on first call
@@ -412,6 +435,8 @@ class BehaviorLeRobotDataset(LeRobotDataset):
             item["skill_prompts"] = skill_prompts
         # if annotations is not None:
         #     item["annotations"] = annotations
+        if ep_idx in self.meta.episodes_prompt_variants:
+            item["prompt"] = self.meta.episodes_prompt_variants[ep_idx]
 
         self.current_streaming_frame_idx += 1
 
@@ -486,6 +511,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
     def _get_keyframe_chunk_indices(self, chunk_size=250) -> List[Tuple[int, int, int]]:
         """
         Divide each episode into chunks of data based on GOP of the data (here for B1K, GOP size is 250 frames).
+        If frame-level filtering is enabled, only include chunks where ALL frames are valid.
         Args:
             chunk_size (int): size of each chunk in number of frames. Default is 250 for B1K. Should be the GOP size of the video data.
         Returns:
@@ -499,9 +525,95 @@ class BehaviorLeRobotDataset(LeRobotDataset):
             local_starts = list(range(0, L, chunk_size))
             local_ends = local_starts[1:] + [L]
             for ls, le in zip(local_starts, local_ends):
-                chunks.append((offset + ls, offset + le, ls))
+                # If filtering is enabled, only include chunks where all frames are valid
+                if self.valid_frame_mask is not None:
+                    chunk_mask = self.valid_frame_mask[offset + ls:offset + le]
+                    if sum(chunk_mask) > (chunk_size / 2):
+                        chunks.append((offset + ls, offset + le, ls))
+                else:
+                    chunks.append((offset + ls, offset + le, ls))
             offset += L
+
+        if self.valid_frame_mask is not None:
+            logger.info(f"Chunk-level filtering: kept {len(chunks)} chunks (each chunk must have all frames valid)")
+
         return chunks
+
+    def _build_frame_mask_and_filter_episodes(self) -> None:
+        """
+        Build a frame-level validity mask based on skill annotations and banned skill descriptions.
+        For each episode, loads the annotations and marks frames as valid/invalid based on 
+        whether their corresponding skill description is in the banned list.
+        Episodes where annotations cannot be loaded are filtered out entirely.
+
+        This method is called BEFORE chunks are created, allowing _get_keyframe_chunk_indices
+        to filter out entire chunks that contain any banned frames.
+        """
+        logger.info(f"Building frame mask with {len(self.banned_skill_descriptions)} banned skill descriptions: {self.banned_skill_descriptions}")
+
+        # Build a mapping of global frame index to whether it should be included
+        valid_frame_mask = []
+        episodes_to_remove = []
+
+        for ep_idx in self.episodes:
+            task_idx = ep_idx // 10000
+            ep_length = self.meta.episodes[ep_idx]["length"]
+
+            # Try to load annotations for this episode
+            annotation_path = self.root / "annotations" / f"task-{task_idx:04d}" / f"episode_{ep_idx:08d}.json"
+            try:
+                with open(annotation_path, "r") as f:
+                    annotations = json.load(f)
+                skill_annotations = annotations.get("skill_annotation", [])
+
+                # Create a boolean mask for this episode, default to False for all frames
+                episode_mask = [False] * ep_length
+
+                # Mark frames as valid if they belong to a non-banned skill
+                for skill in skill_annotations:
+                    # if skill description is invalid, skip
+                    skill_desc = skill["skill_description"][0]
+                    if skill_desc in self.banned_skill_descriptions:
+                        continue
+
+                    # this can be either a list of 2 integers (start_frame, end_frame) or a list of lists of 2 integers
+                    frame_duration_lists = skill["frame_duration"]
+                    if isinstance(frame_duration_lists, list) and len(frame_duration_lists) == 2 and all(isinstance(x, int) for x in frame_duration_lists):
+                        frame_duration_lists = [frame_duration_lists]
+
+                    # each element here is guaranteed to be a list of 2 integers
+                    for frame_duration_list in frame_duration_lists:
+                        start_frame, end_frame = frame_duration_list
+                        for frame_idx in range(start_frame, end_frame):
+                            if frame_idx < ep_length:
+                                episode_mask[frame_idx] = True
+
+                valid_frame_mask.extend(episode_mask)
+
+                # Log statistics for this episode
+                num_valid = sum(episode_mask)
+                if num_valid < ep_length:
+                    logger.info(f"Episode {ep_idx}: {num_valid}/{ep_length} frames kept after filtering")
+
+            except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+                logger.warning(f"Could not load annotations for episode {ep_idx}: {e}. Filtering out entire episode.")
+                # Mark all frames in this episode as invalid
+                valid_frame_mask.extend([False] * ep_length)
+                episodes_to_remove.append(ep_idx)
+
+        # Update self.episodes to only include valid episodes
+        if episodes_to_remove:
+            num_episodes = len(self.episodes)
+            self.episodes = [ep for ep in self.episodes if ep not in episodes_to_remove]
+            logger.info(f"Filtered out {len(episodes_to_remove)}/{num_episodes} episodes due to missing annotations")
+
+        # Store the valid frame mask for use in _get_keyframe_chunk_indices
+        self.valid_frame_mask = valid_frame_mask
+
+        # Log overall statistics
+        total_frames = len(valid_frame_mask)
+        valid_frames = sum(valid_frame_mask)
+        logger.info(f"Frame-level mask built: {valid_frames}/{total_frames} frames marked as valid ({100*valid_frames/total_frames:.1f}%)")
 
     def close(self) -> None:
         """
@@ -591,6 +703,9 @@ class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
             self.stats = aggregate_stats(list(self.episodes_stats.values()))
         logger.info(f"Loaded metadata for {len(self.episodes)} episodes.")
 
+        self.episodes_prompt_variants = self.load_episodes_prompt_variants(self.root)
+        logger.info(f"Loaded {len(self.episodes_prompt_variants)} episodes prompt variants.")
+
     def load_tasks(self, local_dir: Path) -> tuple[dict, dict]:
         tasks = load_jsonlines(local_dir / TASKS_PATH)
         task_names = {item["task_index"]: item["task_name"] for item in sorted(tasks, key=lambda x: x["task_index"])}
@@ -604,6 +719,14 @@ class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
             item["episode_index"]: item
             for item in sorted(episodes, key=lambda x: x["episode_index"])
             if item["episode_index"] // 1e4 in self.tasks
+        }
+
+    def load_episodes_prompt_variants(self, local_dir: Path) -> dict:
+        episodes_prompt_variants = load_jsonlines(local_dir / EPISODES_PROMPT_VARIANTS_PATH)
+        return {
+            item["episode_index"]: item["tasks"][0]
+            for item in sorted(episodes_prompt_variants, key=lambda x: x["episode_index"])
+            if item["episode_index"] // 1e4 in self.tasks and "tasks" in item and len(item["tasks"]) > 0
         }
 
     def load_stats(self, local_dir: Path) -> dict[str, dict[str, np.ndarray]]:

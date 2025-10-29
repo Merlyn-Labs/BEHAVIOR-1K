@@ -163,7 +163,10 @@ def shutdown_handler(*args, **kwargs):
 
 
 # Something somewhere disables the default SIGINT handler, so we need to re-enable it
-signal.signal(signal.SIGINT, shutdown_handler)
+# However, this global signal handler causes deadlocks with PyTorch DataLoader multiprocessing.
+# When OMNIGIBSON_NO_SIGNALS is set, skip signal handler registration (useful for training).
+if not os.getenv("OMNIGIBSON_NO_SIGNALS", "").lower() in ("1", "true", "yes"):
+    signal.signal(signal.SIGINT, shutdown_handler)
 
 __all__ = [
     "ALL_SENSOR_MODALITIES",
