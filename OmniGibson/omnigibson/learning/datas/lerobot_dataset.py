@@ -37,7 +37,7 @@ from pathlib import Path
 from torch.utils.data import Dataset, get_worker_info
 from typing import Iterable, List, Tuple
 
-EPISODES_PROMPT_VARIANTS_PATH = "meta/episodes_prompt_variants.jsonl"
+EPISODES_PROMPT_VARIANTS_PATH = "meta/episodes_with_variants.jsonl"
 
 logger = create_module_logger("BehaviorLeRobotDataset")
 
@@ -590,11 +590,6 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
                 valid_frame_mask.extend(episode_mask)
 
-                # Log statistics for this episode
-                num_valid = sum(episode_mask)
-                if num_valid < ep_length:
-                    logger.info(f"Episode {ep_idx}: {num_valid}/{ep_length} frames kept after filtering")
-
             except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
                 logger.warning(f"Could not load annotations for episode {ep_idx}: {e}. Filtering out entire episode.")
                 # Mark all frames in this episode as invalid
@@ -723,6 +718,7 @@ class BehaviorLerobotDatasetMetadata(LeRobotDatasetMetadata):
 
     def load_episodes_prompt_variants(self, local_dir: Path) -> dict:
         episodes_prompt_variants = load_jsonlines(local_dir / EPISODES_PROMPT_VARIANTS_PATH)
+        logger.info(f"Loaded {len(episodes_prompt_variants)} episodes prompt variants.")
         return {
             item["episode_index"]: item["tasks"][0]
             for item in sorted(episodes_prompt_variants, key=lambda x: x["episode_index"])
