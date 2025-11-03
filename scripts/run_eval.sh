@@ -1,65 +1,40 @@
 #!/bin/bash
 
-    #     max_steps=500 \
-    #     eval_on_train_instances=true \
+EXP_NAME="25k_ds_filtering_again_special_prompts"
+LOG_DIR="video_outputs/${EXP_NAME}"
 
 deactivate
 eval "$(conda shell.bash hook)"
 conda deactivate
 conda activate behavior
 
-# time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-#     policy=local \
-#     task.name=turning_on_radio \
-#     eval_on_train_instances=true \
-#     log_notes="tor_obv_training" \
-#     policy_config=pi0_b1k \
-#     policy_dir=/workspace/openpi/outputs/checkpoints/pi0_b1k/openpi_0_20251005_045853/46000/
+mkdir -p "${LOG_DIR}"
 
-# time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-#     policy=local \
-#     task.name=turning_on_radio \
-#     env_wrapper._target_=omnigibson.learning.wrappers.DefaultWrapper \
-#     eval_on_train_instances=true \
-#     log_notes="training_with_default_wrapper" \
-#     policy_config=pi05_b1k \
-#     max_steps=2000 \
-#     policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20250929_205856/49999/
-
-time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-    policy=local \
+python OmniGibson/omnigibson/learning/eval.py \
+    policy=websocket \
     task.name=turning_on_radio \
-    eval_on_train_instances=true \
-    log_notes="training_with_dataset_inputs_proprio_only" \
-    policy_config=pi05_b1k \
-    max_steps=2000 \
-    use_dataset_inputs_proprio_only=false \
-    policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20250929_205856/49999/
+    eval_on_train_instances=false \
+    eval_instance_ids=[0,1,2,3,4,5] \
+    log_path="${LOG_DIR}/${EXP_NAME}_tor_test" \
+    prompt="Pick up and lift up the radio receiver that's on the table in the living room."
 
-# time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-#     policy=local \
+# python OmniGibson/omnigibson/learning/eval.py \
+#     policy=websocket \
 #     task.name=turning_on_radio \
-#     log_notes="tor_subtask_prompts" \
-#     policy_config=pi05_b1k \
-#     policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20251001_035802/77000/
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1,2,3,4,5] \
+#     log_path="${LOG_DIR}/${EXP_NAME}_tor_train"
 
-# time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-#     policy=local \
-#     task.name=turning_on_radio \
-#     log_notes="tor_subtask_prompts" \
-#     policy_config=pi05_b1k \
-#     policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20250929_205856/48000/
+# python OmniGibson/omnigibson/learning/eval.py \
+#     policy=websocket \
+#     task.name=picking_up_trash \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2,3] \
+#     log_path="${LOG_DIR}/${EXP_NAME}_picking_up_trash_test"
 
-# time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-#     policy=local \
-#     task.name=turning_on_radio \
-#     log_notes="tor" \
-#     policy_config=pi05_b1k \
-#     policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20251001_035802/79000/
-
-# time XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-#     policy=local \
+# python OmniGibson/omnigibson/learning/eval.py \
+#     policy=websocket \
 #     task.name=freeze_pies \
-#     log_notes="freeze_pies" \
-#     policy_config=pi05_b1k \
-#     policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20251001_035802/49999/
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2,3] \
+#     log_path="${LOG_DIR}/${EXP_NAME}_fp_test"

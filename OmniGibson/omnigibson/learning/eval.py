@@ -183,6 +183,7 @@ class Evaluator:
             "policy_dir": self.cfg.policy_dir,
             "use_dataset_inputs": self.cfg.use_dataset_inputs,
             "use_dataset_inputs_proprio_only": self.cfg.use_dataset_inputs_proprio_only,
+            "prompt": self.cfg.prompt,
         })
         logger.info("")
         logger.info("=" * 50)

@@ -96,6 +96,7 @@ class LocalPolicy:
         task_name: Optional[str] = None,
         use_dataset_inputs: Optional[bool] = False,
         use_dataset_inputs_proprio_only: Optional[bool] = False,
+        prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
         self.action_dim = action_dim
@@ -108,6 +109,7 @@ class LocalPolicy:
             self.policy = load_policy(policy_config, policy_dir, task_name)
         else:
             self.policy = None  # To be set later
+        self.prompt = prompt
 
     def act(self, obs: dict) -> th.Tensor:
         return self.forward(obs)
@@ -116,23 +118,23 @@ class LocalPolicy:
         """
         Directly return a zero action tensor of the specified action dimension.
         """
-        out_path = f"./obs_from_eval_v2/{self.task_instance}/{self.step_count}.pkl"
-        save_pickle(obs, out_path)
+        if self.prompt is not None:
+            obs["prompt"] = self.prompt
         if self.policy is not None:
             if self.use_dataset_inputs_proprio_only:
                 obs_with_proprio_from_dp = {
                     **obs,
                     "robot_r1::proprio": self.dataset_policy.current_datapoint[OBS_TO_DP_MAPPING["robot_r1::proprio"]]
                 }
-                out = self.policy.act(obs_with_proprio_from_dp).detach().cpu()[0]
+                out = self.policy.act(obs_with_proprio_from_dp).detach().cpu()
                 self.dataset_policy.run_iterator_step()
             elif self.use_dataset_inputs:
                 obs_from_datapoint = get_obs_from_datapoint(self.dataset_policy.current_datapoint)
-                out = self.policy.act(obs_from_datapoint).detach().cpu()[0]
+                out = self.policy.act(obs_from_datapoint).detach().cpu()
                 self.dataset_policy.run_iterator_step()
             else:
                 obs = convert_obs_to_numpy(obs)
-                out = self.policy.act(obs).detach().cpu()[0]
+                out = self.policy.act(obs).detach().cpu()
             self.step_count += 1
             return out
         else:
@@ -164,17 +166,19 @@ class WebsocketPolicy:
         *args,
         host: Optional[str] = None,
         port: Optional[int] = None,
+        prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
         logging.info(f"Creating websocket client policy with host: {host}, port: {port}")
         self.policy = WebsocketClientPolicy(host=host, port=port)
+        self.prompt = prompt
 
     def forward(self, obs: dict, *args, **kwargs) -> th.Tensor:
         # convert observation to numpy
         obs = torch_to_numpy(obs)
-        out = self.policy.act(obs).detach().cpu()
-        print(out.shape)
-        return out
+        if self.prompt is not None:
+            obs["prompt"] = self.prompt
+        return self.policy.act(obs).detach().cpu()
 
     def reset(self) -> None:
         self.policy.reset()
