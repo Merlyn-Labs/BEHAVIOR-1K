@@ -58,16 +58,7 @@ def get_obs_from_datapoint(datapoint):
     return convert_obs_to_numpy(obs)
 
 
-def load_policy(policy_config: str, policy_dir: str, task_name: str):
-    dataset_root = "/scr/behavior/2025-challenge-demos"
-    metadata = BehaviorLerobotDatasetMetadata(
-        repo_id="behavior-1k/2025-challenge-demos",
-        root=dataset_root,
-        tasks=[task_name] if task_name else "turning_on_radio",
-        modalities=[],
-        cameras=[],
-    )
-    # log the prompt used
+def load_policy(policy_config: str, policy_dir: str):
     logging.info(f"Using policy config: {policy_config}")
     logging.info(f"Using policy dir: {policy_dir}")
     config = _config.get_config(policy_config)
@@ -102,7 +93,7 @@ class LocalPolicy:
         if policy_config is not None and policy_dir is not None and task_name is not None:
             if self.use_dataset_inputs or self.use_dataset_inputs_proprio_only:
                 self.dataset_policy = LookupPolicy(policy_config=policy_config, task_name=task_name)
-            self.policy = load_policy(policy_config, policy_dir, task_name)
+            self.policy = load_policy(policy_config, policy_dir)
         else:
             self.policy = None  # To be set later
         self.prompt = prompt
