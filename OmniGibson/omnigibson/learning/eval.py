@@ -167,6 +167,10 @@ class Evaluator:
             BaseRobot: The robot instance loaded from the environment.
         """
         robot = self.env.scene.object_registry("name", "robot_r1")
+        if self.cfg.use_heavy_robot:
+            with og.sim.stopped():
+                robot.base_footprint_link.mass = 250.0
+            logger.info("Set robot mass to 250kg")
         return robot
 
     def load_policy(self) -> Any:
@@ -366,16 +370,7 @@ class Evaluator:
         """
         Reset the environment, policy, and compute metrics.
         """
-        # self.obs = self._preprocess_obs(self.env.reset()[0])
-        WARMUP_STEPS = 250  # Usually 50-100 is enough
-
-        self.env.reset()
-
-        for _ in range(WARMUP_STEPS):
-            # Step with zero or very small actions to let physics settle
-            obs_tup = self.env.step(th.zeros(self.robot.action_dim))
-
-        self.obs = self._preprocess_obs(obs_tup[0])
+        self.obs = self._preprocess_obs(self.env.reset()[0])
         # run metric start callbacks
         for metric in self.metrics:
             metric.start_callback(self.env)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EXP_NAME="ds_replay"
+EXP_NAME="ds_replay_heavy_robot"
 LOG_DIR="video_outputs/${EXP_NAME}"
 
 deactivate
@@ -20,6 +20,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.p
     eval_instance_ids=[0,1,2] \
     extra_notes="Just reproducing some pick up trash results" \
     log_path="${LOG_DIR}/${EXP_NAME}_put_train" \
+    # use_heavy_robot=true
     # prompt="\"Spin around and around in circles.\""
 
 # XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
