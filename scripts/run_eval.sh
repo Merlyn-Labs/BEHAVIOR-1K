@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EXP_NAME="ds_replay_heavy_robot"
+EXP_NAME="rl_40_step"
 LOG_DIR="video_outputs/${EXP_NAME}"
 
 deactivate
@@ -11,24 +11,26 @@ conda activate behavior
 mkdir -p "${LOG_DIR}"
 
 # POLICY_ARGS="policy=local policy_config=pi05_b1k policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k/openpi_05_20251029_024836/25000/"
-POLICY_ARGS="policy=lookup"
-
-XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-    ${POLICY_ARGS} \
-    task.name=picking_up_trash \
-    eval_on_train_instances=true \
-    eval_instance_ids=[0,1,2] \
-    extra_notes="Just reproducing some pick up trash results" \
-    log_path="${LOG_DIR}/${EXP_NAME}_put_train" \
-    # use_heavy_robot=true
-    # prompt="\"Spin around and around in circles.\""
+# POLICY_ARGS="policy=lookup"
+POLICY_ARGS="policy=websocket"
 
 # XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
 #     ${POLICY_ARGS} \
-#     task.name=turning_on_radio \
+#     task.name=picking_up_trash \
 #     eval_on_train_instances=true \
-#     eval_instance_ids=[0,1,2,3,4,5] \
-#     log_path="${LOG_DIR}/${EXP_NAME}_tor_train"
+#     eval_instance_ids=[0,1,2] \
+#     extra_notes="Just reproducing some pick up trash results" \
+#     log_path="${LOG_DIR}/${EXP_NAME}_put_train" \
+    # use_heavy_robot=true
+    # prompt="\"Spin around and around in circles.\""
+
+XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+    ${POLICY_ARGS} \
+    task.name=turning_on_radio \
+    eval_on_train_instances=true \
+    eval_instance_ids=[0,1,2,3,4,5] \
+    extra_notes="First ever RL run, ckpt exported after 40 steps" \
+    log_path="${LOG_DIR}/${EXP_NAME}_tor_train"
 
 # XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
 #     ${POLICY_ARGS} \
