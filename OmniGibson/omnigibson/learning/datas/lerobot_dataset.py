@@ -108,7 +108,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
             undersampled_skill_descriptions (Dict[str, float]): dict mapping skill descriptions to their inclusion probability (0.0 to 1.0). 
                 For each skill in an episode, if its description is in this dict, it will be included with the given probability.
                 Skills not in the dict are implicitly assumed to have probability 1.0 (always included).
-                If annotations cannot be read for an episode, that entire episode will be filtered out.
+                If annotations cannot be read for an episode, all frames in that episode will be marked as invalid.
                 This filtering is applied at initialization, respects chunk streaming mode, and uses the seed for reproducibility.
         """
         Dataset.__init__(self)
@@ -173,7 +173,30 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 epi_by_task[task_id] = [epi_by_task[task_id][i] for i in episodes if i < len(epi_by_task[task_id])]
         # now put episodes back together
         self.episodes = sorted([ep for eps in epi_by_task.values() for ep in eps])
-        
+
+        # record the positional index of each episode index within self.episodes
+        self.episode_data_index_pos = {ep_idx: i for i, ep_idx in enumerate(self.episodes)}
+        logger.info(f"Total episodes: {len(self.episodes)}")
+        # ====================================
+
+        if self.episodes is not None and self.meta._version >= packaging.version.parse("v2.1"):
+            episodes_stats = [self.meta.episodes_stats[ep_idx] for ep_idx in self.episodes]
+            self.stats = aggregate_stats(episodes_stats)
+
+        # Load actual data
+        try:
+            if force_cache_sync:
+                raise FileNotFoundError
+            for fpath in self.get_episodes_file_paths():
+                assert (self.root / fpath).is_file(), f"Missing file: {self.root / fpath}"
+            self.hf_dataset = self.load_hf_dataset()
+        except (AssertionError, FileNotFoundError, NotADirectoryError) as e:
+            if local_only:
+                raise e
+            self.revision = get_safe_version(self.repo_id, self.revision)
+            self.download_episodes(download_videos)
+            self.hf_dataset = self.load_hf_dataset()
+
         # Apply frame-level filtering based on skill annotations if needed
         # This must happen BEFORE creating chunks
         self.valid_frame_mask = None
@@ -197,28 +220,6 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 self.current_streaming_frame_idx = self.chunks[self.current_streaming_chunk_idx][0]
             self.obs_loaders = dict()
             self._should_obs_loaders_reload = True
-        # record the positional index of each episode index within self.episodes
-        self.episode_data_index_pos = {ep_idx: i for i, ep_idx in enumerate(self.episodes)}
-        logger.info(f"Total episodes: {len(self.episodes)}")
-        # ====================================
-
-        if self.episodes is not None and self.meta._version >= packaging.version.parse("v2.1"):
-            episodes_stats = [self.meta.episodes_stats[ep_idx] for ep_idx in self.episodes]
-            self.stats = aggregate_stats(episodes_stats)
-
-        # Load actual data
-        try:
-            if force_cache_sync:
-                raise FileNotFoundError
-            for fpath in self.get_episodes_file_paths():
-                assert (self.root / fpath).is_file(), f"Missing file: {self.root / fpath}"
-            self.hf_dataset = self.load_hf_dataset()
-        except (AssertionError, FileNotFoundError, NotADirectoryError) as e:
-            if local_only:
-                raise e
-            self.revision = get_safe_version(self.repo_id, self.revision)
-            self.download_episodes(download_videos)
-            self.hf_dataset = self.load_hf_dataset()
 
         self.episode_data_index = get_episode_data_index(self.meta.episodes, self.episodes)
 
@@ -546,7 +547,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         For each episode, loads the annotations and marks frames as valid/invalid based on 
         probabilistic undersampling of skills according to undersampled_skill_descriptions dict.
         Skills not in the dict are assumed to have probability 1.0 (always included).
-        Episodes where annotations cannot be loaded are filtered out entirely.
+        Episodes where annotations cannot be loaded will have all their frames marked as invalid.
 
         This method is called BEFORE chunks are created, allowing _get_keyframe_chunk_indices
         to filter out entire chunks that contain undersampled frames.
@@ -560,7 +561,6 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         # Build a mapping of global frame index to whether it should be included
         valid_frame_mask = []
-        episodes_to_remove = []
 
         for ep_idx in self.episodes:
             task_idx = ep_idx // 10000
@@ -606,16 +606,9 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 valid_frame_mask.extend(episode_mask)
 
             except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-                logger.warning(f"Could not load annotations for episode {ep_idx}: {e}. Filtering out entire episode.")
+                logger.warning(f"Could not load annotations for episode {ep_idx}: {e}. Marking all frames as invalid.")
                 # Mark all frames in this episode as invalid
                 valid_frame_mask.extend([False] * ep_length)
-                episodes_to_remove.append(ep_idx)
-
-        # Update self.episodes to only include valid episodes
-        if episodes_to_remove:
-            num_episodes = len(self.episodes)
-            self.episodes = [ep for ep in self.episodes if ep not in episodes_to_remove]
-            logger.info(f"Filtered out {len(episodes_to_remove)}/{num_episodes} episodes due to missing annotations")
 
         # Store the valid frame mask for use in _get_keyframe_chunk_indices
         self.valid_frame_mask = valid_frame_mask
