@@ -197,6 +197,7 @@ class Evaluator:
             "use_dataset_inputs": self.cfg.use_dataset_inputs,
             "use_dataset_inputs_proprio_only": self.cfg.use_dataset_inputs_proprio_only,
             "prompt": self.cfg.prompt,
+            "inf_time_proprio_dropout": self.cfg.inf_time_proprio_dropout,
         })
         logger.info("")
         logger.info("=" * 50)
