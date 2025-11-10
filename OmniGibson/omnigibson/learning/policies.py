@@ -93,14 +93,16 @@ class LocalPolicy:
         use_dataset_inputs_proprio_only: Optional[bool] = False,
         prompt: Optional[str] = None,
         inf_time_proprio_dropout: Optional[float] = 0.0,
+        n_ds_steps: Optional[int] = 0,
         **kwargs,
     ) -> None:
         self.action_dim = action_dim
         self.dataset_policy = None
         self.use_dataset_inputs = use_dataset_inputs
         self.use_dataset_inputs_proprio_only = use_dataset_inputs_proprio_only
+        self.n_ds_steps = n_ds_steps
         if policy_config is not None and policy_dir is not None and task_name is not None:
-            if self.use_dataset_inputs or self.use_dataset_inputs_proprio_only:
+            if self.use_dataset_inputs or self.use_dataset_inputs_proprio_only or self.n_ds_steps > 0:
                 self.dataset_policy = LookupPolicy(policy_config=policy_config, task_name=task_name)
             self.policy = load_policy(policy_config, policy_dir, inf_time_proprio_dropout)
         else:
@@ -127,6 +129,9 @@ class LocalPolicy:
                 obs_from_datapoint = get_obs_from_datapoint(self.dataset_policy.get_current_datapoint())
                 out = self.policy.act(obs_from_datapoint).detach().cpu()
             else:
+                if self.n_ds_steps > 0 and self.step_count < self.n_ds_steps:
+                    self.step_count += 1
+                    return self.dataset_policy.forward({})
                 obs = convert_obs_to_numpy(obs)
                 out = self.policy.act(obs).detach().cpu()
             self.step_count += 1
