@@ -61,6 +61,15 @@ logger = logging.getLogger("evaluator")
 logger.setLevel(20)  # info
 
 
+def recursively_convert_tensor_to_list(dict_input: dict) -> dict:
+    for key, value in dict_input.items():
+        if isinstance(value, th.Tensor):
+            dict_input[key] = value.tolist()
+        elif isinstance(value, dict):
+            recursively_convert_tensor_to_list(value)
+    return dict_input
+
+
 class Evaluator:
     """
     Evaluator class for running and evaluating policies for behavior task.
