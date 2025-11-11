@@ -573,8 +573,8 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                     annotations = json.load(f)
                 skill_annotations = annotations.get("skill_annotation", [])
 
-                # Create a boolean mask for this episode, default to False for all frames
-                episode_mask = [False] * ep_length
+                # Create a boolean mask for this episode, default to True for all frames
+                episode_mask = [True] * ep_length
 
                 # Mark frames as valid based on probabilistic undersampling
                 for skill in skill_annotations:
@@ -582,14 +582,15 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                     skill_desc = skill["skill_description"][0]
 
                     # Decide whether to include this skill based on probability
-                    if skill_desc in self.undersampled_skill_descriptions:
+                    if skill_desc not in self.undersampled_skill_descriptions:
+                        continue
 
-                        # Get inclusion probability
-                        inclusion_prob = self.undersampled_skill_descriptions[skill_desc]
+                    # Get inclusion probability
+                    inclusion_prob = self.undersampled_skill_descriptions[skill_desc]
 
-                        if rng.random() > inclusion_prob:
-                            # Skip this skill (undersample it)
-                            continue
+                    if rng.random() < inclusion_prob:
+                        # Skip removing this skill i.e. keep it
+                        continue
 
                     # this can be either a list of 2 integers (start_frame, end_frame) or a list of lists of 2 integers
                     frame_duration_lists = skill["frame_duration"]
@@ -601,7 +602,8 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                         start_frame, end_frame = frame_duration_list
                         for frame_idx in range(start_frame, end_frame):
                             if frame_idx < ep_length:
-                                episode_mask[frame_idx] = True
+                                # remove this series of frames from the training data
+                                episode_mask[frame_idx] = False
 
                 valid_frame_mask.extend(episode_mask)
 
