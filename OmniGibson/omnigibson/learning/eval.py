@@ -70,72 +70,6 @@ def recursively_convert_tensor_to_list(dict_input: dict) -> dict:
     return dict_input
 
 
-def teleport_robot_to_face_object(robot, target_position, distance=0.5, yaw_offset_rad=0.0):
-    """
-    Teleport robot to face a specific object.
-    
-    Args:
-        robot: The robot object from OmniGibson
-        target_position: [x, y, z] position of the target object
-        distance: How far from the object the robot should be (in meters)
-        yaw_offset_rad: Optional constant offset to add to yaw (radians)
-    """
-    import numpy as np
-    from scipy.spatial.transform import Rotation
-
-    # Helper to convert potential tensor inputs to numpy
-    def _to_numpy(v):
-        if isinstance(v, th.Tensor):
-            return v.detach().cpu().numpy()
-        return np.asarray(v, dtype=float)
-    
-    target_pos = _to_numpy(target_position)
-    robot_pos_now, _ = robot.get_position_orientation()
-    robot_pos_now = _to_numpy(robot_pos_now)
-    
-    # Horizontal direction from target to current robot position (XY plane)
-    distance_to_robot_xy = robot_pos_now[:2] - target_pos[:2]
-    norm = np.linalg.norm(distance_to_robot_xy)
-    if norm < 1e-6:
-        dir_xy = np.array([1.0, 0.0], dtype=float)  # fallback direction
-    else:
-        dir_xy = distance_to_robot_xy / norm
-
-    # Place the robot `distance` meters away from the target, along the line towards the robot
-    new_position = np.array([
-        target_pos[0] + dir_xy[0] * distance,
-        target_pos[1] + dir_xy[1] * distance,
-        robot_pos_now[2],  # preserve current base height (do not snap to object z)
-    ], dtype=float)
-    
-    # Yaw to face the target (world Z-axis), with optional offset; keep XYZW convention
-    to_target_xy = target_pos[:2] - new_position[:2]
-    yaw = np.arctan2(to_target_xy[1], to_target_xy[0]) + yaw_offset_rad
-    robot_orientation_xyzw = Rotation.from_euler('z', yaw).as_quat()
-    
-    # Set robot position and orientation
-    print(f"\nTeleporting robot to face target at {target_position}")
-    print(f"  Robot position: {new_position}")
-    print(f"  Robot orientation (quaternion XYZW): {robot_orientation_xyzw}")
-    print(f"  Yaw angle: {np.degrees(yaw):.2f} degrees")
-    # Safely stop sim while toggling collisions and teleporting to avoid contact corrections
-    with og.sim.stopped():
-        try:
-            for link in robot.links.values():
-                link.disable_collisions()
-            robot.set_position_orientation(
-                position=new_position,
-                orientation=robot_orientation_xyzw,
-                frame="world",
-            )
-        finally:
-            for link in robot.links.values():
-                link.enable_collisions()
-    # Zero velocities to prevent drift on resume
-    robot.keep_still()
-    print("✓ Robot teleported successfully!")
-
-
 def find_object_by_name(scene, search_term):
     """
     Find an object in the scene by name (case-insensitive partial match).
@@ -253,6 +187,65 @@ class Evaluator:
         # instantiate env wrapper
         env = instantiate(env_wrapper, env=env)
         return env
+
+    def teleport_robot_to_face_object(self, target_position, distance=0.5, yaw_offset_rad=0.0):
+        """
+        Teleport robot to face a specific object.
+
+        Args:
+            robot: The robot object from OmniGibson
+            target_position: [x, y, z] position of the target object
+            distance: How far from the object the robot should be (in meters)
+            yaw_offset_rad: Optional constant offset to add to yaw (radians)
+        """
+        import numpy as np
+        from scipy.spatial.transform import Rotation
+
+        # Helper to convert potential tensor inputs to numpy
+        def _to_numpy(v):
+            if isinstance(v, th.Tensor):
+                return v.detach().cpu().numpy()
+            return np.asarray(v, dtype=float)
+
+        target_pos = _to_numpy(target_position)
+        robot_pos_now, _ = self.robot.get_position_orientation()
+        robot_pos_now = _to_numpy(robot_pos_now)
+
+        # Horizontal direction from target to current robot position (XY plane)
+        distance_to_robot_xy = robot_pos_now[:2] - target_pos[:2]
+        norm = np.linalg.norm(distance_to_robot_xy)
+        if norm < 1e-6:
+            dir_xy = np.array([1.0, 0.0], dtype=float)  # fallback direction
+        else:
+            dir_xy = distance_to_robot_xy / norm
+
+        # Place the robot `distance` meters away from the target, along the line towards the robot
+        new_position = np.array([
+            target_pos[0] + dir_xy[0] * distance,
+            target_pos[1] + dir_xy[1] * distance,
+            robot_pos_now[2],  # preserve current base height (do not snap to object z)
+        ], dtype=float)
+
+        # Yaw to face the target (world Z-axis), with optional offset; keep XYZW convention
+        to_target_xy = target_pos[:2] - new_position[:2]
+        yaw = np.arctan2(to_target_xy[1], to_target_xy[0]) + yaw_offset_rad
+        robot_orientation_xyzw = Rotation.from_euler('z', yaw).as_quat()
+
+        # Safely stop sim while toggling collisions and teleporting to avoid contact corrections
+        with og.sim.stopped():
+            try:
+                for link in self.robot.links.values():
+                    link.disable_collisions()
+                self.robot.set_position_orientation(
+                    position=new_position,
+                    orientation=robot_orientation_xyzw,
+                    frame="world",
+                )
+            finally:
+                for link in self.robot.links.values():
+                    link.enable_collisions()
+
+        self.robot.keep_still()
 
     def load_robot(self) -> BaseRobot:
         """
@@ -408,7 +401,7 @@ class Evaluator:
         # box_1 = self.env.scene.objects[-2]
         # box_1_position, box_1_orientation = box_1.get_position_orientation()
         # print(f"Telporting robot to face object {box_1.name} at {box_1_position}")
-        # teleport_robot_to_face_object(self.robot, box_1_position, distance=0.005)
+        # self.teleport_robot_to_face_object(self.robot, box_1_position, distance=0.1)
 
     def _preprocess_obs(self, obs: dict) -> dict:
         """
