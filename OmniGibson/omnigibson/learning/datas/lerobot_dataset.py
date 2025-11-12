@@ -79,7 +79,8 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         chunk_streaming_using_keyframe: bool = True,
         shuffle: bool = True,
         seed: int = 42,
-        undersampled_skill_descriptions: dict[str, float] | None = None,
+        undersampled_skill_descriptions: dict[str, float] | None = None,  # TODO: deprecated and unused
+        resampled_skill_descriptions: dict[str, float] | None = None,
         boundary_oversampling_factor: int = 1,
         boundary_window_frames: int = 50,
     ):
@@ -106,10 +107,13 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 When this is enabled, it is recommended to set shuffle to True for better randomness in chunk selection.
                 We also enforce that segmentation instance ID videos can only be loaded in chunk_streaming_using_keyframe mode for faster access.
             shuffle (bool): whether to shuffle the chunks after loading. This ONLY applies in chunk streaming mode. Recommended to be set to True for better randomness in chunk selection.
-            seed (int): random seed for shuffling chunks and for probabilistic skill undersampling.
-            undersampled_skill_descriptions (Dict[str, float]): dict mapping skill descriptions to their inclusion probability (0.0 to 1.0). 
-                For each skill in an episode, if its description is in this dict, it will be included with the given probability.
-                Skills not in the dict are implicitly assumed to have probability 1.0 (always included).
+            seed (int): random seed for shuffling chunks and for probabilistic skill resampling.
+            resampled_skill_descriptions (Dict[str, float]): dict mapping skill descriptions to their resampling factors.
+                - 0.0 < factor < 1.0: undersample (probabilistic frame exclusion). For each skill with this factor,
+                  the skill's frames will be included with the given probability.
+                - factor > 1.0: oversample (chunk duplication). Chunks containing these skills will be duplicated
+                  floor(factor) times. For example, factor=2.5 results in 2x duplication.
+                - factor == 1.0 or not in dict: no resampling (included normally).
                 If annotations cannot be read for an episode, all frames in that episode will be marked as invalid.
                 This filtering is applied at initialization, respects chunk streaming mode, and uses the seed for reproducibility.
             boundary_oversampling_factor (int): multiplicative factor for oversampling chunks that contain skill boundaries.
@@ -144,7 +148,10 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         # ========== Customizations ==========
         self.seed = seed
-        self.undersampled_skill_descriptions = undersampled_skill_descriptions if undersampled_skill_descriptions is not None else {}
+        resampled_skill_descriptions = resampled_skill_descriptions if resampled_skill_descriptions is not None else {}
+        # Split into undersampled and oversampled
+        self.undersampled_skill_descriptions = {k: v for k, v in resampled_skill_descriptions.items() if v < 1.0}
+        self.oversampled_skill_descriptions = {k: int(v) for k, v in resampled_skill_descriptions.items() if v > 1.0}
         self.boundary_oversampling_factor = boundary_oversampling_factor
         self.boundary_window_frames = boundary_window_frames
         if modalities is None:
@@ -212,8 +219,11 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         # This must happen BEFORE creating chunks
         self.valid_frame_mask = None
         self.boundary_frame_indicator = None
+        self.oversampled_skill_indicator = None
         if self.undersampled_skill_descriptions:
-            self._build_frame_mask_and_filter_episodes()
+            self._build_undersampled_frame_mask()
+        if self.oversampled_skill_descriptions:
+            self._build_oversampled_skill_indicator()
         if self.boundary_oversampling_factor > 1:
             self._build_boundary_frame_indicator()
         
@@ -529,6 +539,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         Divide each episode into chunks of data based on GOP of the data (here for B1K, GOP size is 250 frames).
         If frame-level filtering is enabled, only include chunks where more than half the frames are valid.
         If boundary oversampling is enabled, chunks containing boundary frames will be added multiple times.
+        If skill oversampling is enabled, chunks containing oversampled skills will be added multiple times.
         Args:
             chunk_size (int): size of each chunk in number of frames. Default is 250 for B1K. Should be the GOP size of the video data.
         Returns:
@@ -538,46 +549,63 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         episode_lengths = [episode_lengths[ep_idx] for ep_idx in self.episodes]
         chunks = []
         boundary_chunks_count = 0
+        skill_oversampled_chunks_count = 0
         offset = 0
-        for L in episode_lengths:
+        for L in episode_lengths:  # for each episode
             local_starts = list(range(0, L, chunk_size))
             local_ends = local_starts[1:] + [L]
             for ls, le in zip(local_starts, local_ends):
-                # Check if chunk contains boundary frames first
+                # Check if chunk contains boundary frames
                 contains_boundary = False
                 if self.boundary_frame_indicator is not None:
                     chunk_boundary_indicator = self.boundary_frame_indicator[offset + ls:offset + le]
-                    contains_boundary = any(chunk_boundary_indicator)
+                    # At least 10% of the chunk must contain boundary points
+                    contains_boundary = sum(chunk_boundary_indicator) > chunk_size * 0.1
 
-                # If chunk contains boundaries, ALWAYS include it (overrides filtering)
+                # Get the maximum oversampling factor from skills in this chunk
+                max_skill_oversample_factor = 1  # default: normal inclusion
+                if self.oversampled_skill_indicator is not None:
+                    chunk_skill_indicator = self.oversampled_skill_indicator[offset + ls:offset + le]
+                    # Get the maximum oversampling factor in this chunk
+                    max_skill_oversample_factor = max(chunk_skill_indicator, default=1)
+
+                # Calculate base duplication factor from boundaries and skills
+                duplication_factor = max(
+                    self.boundary_oversampling_factor if contains_boundary else 1,
+                    max_skill_oversample_factor
+                )
+
+                # Track chunks with oversampling for logging
                 if contains_boundary:
-                    # Add chunk multiple times based on oversampling factor
-                    num_repetitions = self.boundary_oversampling_factor
-                    for _ in range(num_repetitions):
-                        chunks.append((offset + ls, offset + le, ls))
                     boundary_chunks_count += 1
-                else:
-                    # No boundaries - apply normal filtering logic
-                    should_include = True
-                    if self.valid_frame_mask is not None:
-                        chunk_mask = self.valid_frame_mask[offset + ls:offset + le]
-                        if sum(chunk_mask) <= (chunk_size / 2):
-                            should_include = False
+                if max_skill_oversample_factor > 1:
+                    skill_oversampled_chunks_count += 1
 
-                    if should_include:
-                        # Add chunk once
-                        chunks.append((offset + ls, offset + le, ls))
+                # Apply filtering only if no oversampling is active
+                if duplication_factor == 1 and self.valid_frame_mask is not None:
+                    chunk_mask = self.valid_frame_mask[offset + ls:offset + le]
+                    # Skip chunk if less than 50% valid frames
+                    if sum(chunk_mask) <= (chunk_size / 2):
+                        duplication_factor = 0
+
+                # Add chunk the appropriate number of times
+                for _ in range(duplication_factor):
+                    chunks.append((offset + ls, offset + le, ls))
+
             offset += L
 
         if self.valid_frame_mask is not None:
             logger.info(f"Chunk-level filtering: kept {len(chunks)} chunk instances (some chunks may be duplicated)")
 
         if self.boundary_frame_indicator is not None:
-            logger.info(f"Boundary oversampling: {boundary_chunks_count} unique chunks contain boundaries and are repeated {self.boundary_oversampling_factor}x (total: {boundary_chunks_count * self.boundary_oversampling_factor} instances)")
+            logger.info(f"Boundary oversampling: {boundary_chunks_count} unique chunks contain boundaries and are repeated up to {self.boundary_oversampling_factor}x")
+
+        if self.oversampled_skill_indicator is not None:
+            logger.info(f"Skill oversampling: {skill_oversampled_chunks_count} unique chunks contain oversampled skills")
 
         return chunks
 
-    def _build_frame_mask_and_filter_episodes(self) -> None:
+    def _build_undersampled_frame_mask(self) -> None:
         """
         Build a frame-level validity mask based on skill annotations and undersampled skill descriptions.
         For each episode, loads the annotations and marks frames as valid/invalid based on 
@@ -590,7 +618,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         Uses self.seed for RNG reproducibility.
         """
-        logger.info(f"Building frame mask with {len(self.undersampled_skill_descriptions)} undersampled skill descriptions: {self.undersampled_skill_descriptions}")
+        logger.info(f"Building undersampled frame mask with {len(self.undersampled_skill_descriptions)} undersampled skill descriptions: {self.undersampled_skill_descriptions}")
 
         # Create RNG for reproducible probabilistic sampling
         rng = np.random.default_rng(self.seed)
@@ -655,6 +683,77 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         total_frames = len(valid_frame_mask)
         valid_frames = sum(valid_frame_mask)
         logger.info(f"Frame-level mask built: {valid_frames}/{total_frames} frames marked as valid ({100*valid_frames/total_frames:.1f}%). NOTE: this does not account for boundary frames!")
+
+    def _build_oversampled_skill_indicator(self) -> None:
+        """
+        Build a frame-level indicator marking frames belonging to oversampled skills.
+        For each episode, loads the annotations and marks frames that belong to skills in
+        oversampled_skill_descriptions dict. These frames will be used by _get_keyframe_chunk_indices
+        to duplicate chunks containing oversampled skills.
+
+        Each frame is mapped to the maximum oversampling factor of any skill it belongs to.
+        If a frame belongs to multiple oversampled skills, the highest factor is used.
+        1 means normal inclusion (not oversampled), >1 means oversample by that factor.
+        """
+        logger.info(f"Building oversampled skill indicator with {len(self.oversampled_skill_descriptions)} oversampled skill descriptions: {self.oversampled_skill_descriptions}")
+
+        # Build a mapping of global frame index to oversampling factor
+        # 1 means normal inclusion, >1 means oversample by that factor
+        oversampled_skill_indicator = []
+
+        for ep_idx in self.episodes:
+            task_idx = ep_idx // 10000
+            ep_length = self.meta.episodes[ep_idx]["length"]
+
+            # Try to load annotations for this episode
+            annotation_path = self.root / "annotations" / f"task-{task_idx:04d}" / f"episode_{ep_idx:08d}.json"
+            try:
+                with open(annotation_path, "r") as f:
+                    annotations = json.load(f)
+                skill_annotations = annotations.get("skill_annotation", [])
+
+                # Create an indicator for this episode, default to 1 (normal inclusion)
+                episode_indicator = [1] * ep_length
+
+                # Mark frames belonging to oversampled skills
+                for skill in skill_annotations:
+                    skill_desc = skill["skill_description"][0]
+
+                    # Check if this skill should be oversampled
+                    if skill_desc not in self.oversampled_skill_descriptions:
+                        continue
+
+                    # Get oversampling factor
+                    oversample_factor = self.oversampled_skill_descriptions[skill_desc]
+
+                    # Handle both simple and complex frame_duration formats
+                    frame_duration_lists = skill["frame_duration"]
+                    if isinstance(frame_duration_lists, list) and len(frame_duration_lists) == 2 and all(isinstance(x, int) for x in frame_duration_lists):
+                        frame_duration_lists = [frame_duration_lists]
+
+                    # Mark all frames in this skill with the oversampling factor
+                    # If a frame already has a factor, keep the maximum
+                    for frame_duration_list in frame_duration_lists:
+                        start_frame, end_frame = frame_duration_list
+                        for frame_idx in range(start_frame, end_frame):
+                            if frame_idx < ep_length:
+                                episode_indicator[frame_idx] = max(episode_indicator[frame_idx], oversample_factor)
+
+                oversampled_skill_indicator.extend(episode_indicator)
+
+            except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+                logger.warning(f"Could not load annotations for episode {ep_idx}: {e}. No oversampling for this episode.")
+                # Mark all frames as normal (not oversampled)
+                oversampled_skill_indicator.extend([1] * ep_length)
+
+        # Store the oversampled skill indicator
+        self.oversampled_skill_indicator = oversampled_skill_indicator
+
+        # Log statistics
+        total_frames = len(oversampled_skill_indicator)
+        oversampled_frames = sum(1 for x in oversampled_skill_indicator if x > 1)
+        if total_frames > 0:
+            logger.info(f"Oversampled skill indicator built: {oversampled_frames}/{total_frames} frames marked for oversampling ({100*oversampled_frames/total_frames:.1f}%)")
 
     def _build_boundary_frame_indicator(self) -> None:
         """
