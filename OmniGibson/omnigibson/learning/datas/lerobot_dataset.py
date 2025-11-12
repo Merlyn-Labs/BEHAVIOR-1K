@@ -1,4 +1,5 @@
 import datasets
+from datetime import datetime
 import json
 import os
 import numpy as np
@@ -79,10 +80,10 @@ class BehaviorLeRobotDataset(LeRobotDataset):
         chunk_streaming_using_keyframe: bool = True,
         shuffle: bool = True,
         seed: int = 42,
-        undersampled_skill_descriptions: dict[str, float] | None = None,  # TODO: deprecated and unused
         resampled_skill_descriptions: dict[str, float] | None = None,
         boundary_oversampling_factor: int = 1,
         boundary_window_frames: int = 50,
+        checkpoint_dir: str | Path | None = None,
     ):
         """
         Custom args:
@@ -123,8 +124,10 @@ class BehaviorLeRobotDataset(LeRobotDataset):
             boundary_window_frames (int): number of frames around each skill boundary to consider as "boundary region".
                 For example, 50 means frames within ±50 of a skill transition are marked as boundary frames.
                 Chunks overlapping with these regions will be oversampled according to boundary_oversampling_factor.
+            checkpoint_dir (Path | None): directory to save the chunks file for chunk streaming.
         """
         Dataset.__init__(self)
+        self.checkpoint_dir = checkpoint_dir
         self.repo_id = repo_id
         self.root = Path(os.path.expanduser(str(root))) if root else HF_LEROBOT_HOME / repo_id
         self.image_transforms = image_transforms
@@ -389,6 +392,14 @@ class BehaviorLeRobotDataset(LeRobotDataset):
             rng.shuffle(self.chunks)
             self.current_streaming_chunk_idx = rng.integers(0, len(self.chunks)).item()
             self.current_streaming_frame_idx = self.chunks[self.current_streaming_chunk_idx][0]
+            if self.checkpoint_dir is not None:
+                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                with open(self.checkpoint_dir / f"chunks_{current_time}_{worker_id}.json", "w") as f:
+                    json.dump({
+                        "current_streaming_chunk_idx": self.current_streaming_chunk_idx,
+                        "current_streaming_frame_idx": self.current_streaming_frame_idx,
+                        "chunks": self.chunks,
+                    }, f, indent=4)
         # Current chunk iterated, move to next chunk
         if self.current_streaming_frame_idx >= self.chunks[self.current_streaming_chunk_idx][1]:
             self.current_streaming_chunk_idx += 1
