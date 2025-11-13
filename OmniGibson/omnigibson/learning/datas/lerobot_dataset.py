@@ -571,7 +571,7 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                 if self.boundary_frame_indicator is not None:
                     chunk_boundary_indicator = self.boundary_frame_indicator[offset + ls:offset + le]
                     # At least 10% of the chunk must contain boundary points
-                    contains_boundary = sum(chunk_boundary_indicator) > chunk_size * 0.1
+                    contains_boundary = sum(chunk_boundary_indicator) > chunk_size * 0.2
 
                 # Get the maximum oversampling factor from skills in this chunk
                 max_skill_oversample_factor = 1  # default: normal inclusion
@@ -613,6 +613,8 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         if self.oversampled_skill_indicator is not None:
             logger.info(f"Skill oversampling: {skill_oversampled_chunks_count} unique chunks contain oversampled skills")
+
+        logger.info(f"Total chunks: {len(chunks)}")
 
         return chunks
 
