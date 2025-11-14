@@ -414,9 +414,13 @@ class BehaviorLeRobotDataset(LeRobotDataset):
                     samples_to_skip += 1
 
                 if samples_to_skip > 0:
-                    logger.info(f"Worker {worker_id}: Resuming from {self.resume_step} global samples, fast-forwarding {samples_to_skip} samples")
+                    logger.warning(f"Worker {worker_id}: Resuming from {self.resume_step} global samples, fast-forwarding {samples_to_skip} samples")
+                    print(f"Worker {worker_id}: Resuming from {self.resume_step} global samples, fast-forwarding {samples_to_skip} samples")
+
                     self._fast_forward_frames(samples_to_skip)
-                    logger.info(f"Worker {worker_id}: Resumed at chunk {self.current_streaming_chunk_idx}, frame {self.current_streaming_frame_idx}")
+
+                    logger.warning(f"Worker {worker_id}: Resumed at chunk {self.current_streaming_chunk_idx}, frame {self.current_streaming_frame_idx}")
+                    print(f"Worker {worker_id}: Resumed at chunk {self.current_streaming_chunk_idx}, frame {self.current_streaming_frame_idx}")
 
             if self.checkpoint_dir is not None:
                 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
