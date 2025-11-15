@@ -58,7 +58,13 @@ def get_obs_from_datapoint(datapoint):
     return convert_obs_to_numpy(obs)
 
 
-def load_policy(policy_config: str, policy_dir: str, inf_time_proprio_dropout: float, num_diffusion_steps: int):
+def load_policy(
+    policy_config: str,
+    policy_dir: str,
+    inf_time_proprio_dropout: float,
+    num_diffusion_steps: int,
+    control_mode: str = "temporal_ensemble",
+):
     logging.info(f"Using policy config: {policy_config}")
     logging.info(f"Using policy dir: {policy_dir}")
     basic_config = _config.get_config(policy_config)
@@ -78,7 +84,7 @@ def load_policy(policy_config: str, policy_dir: str, inf_time_proprio_dropout: f
         }
     )
     # policy = _policy.PolicyRecorder(policy, "policy_records")
-    policy = B1KPolicyWrapper(policy, config=updated_config)
+    policy = B1KPolicyWrapper(policy, config=updated_config, control_mode=control_mode)
     return policy
 
 
@@ -101,6 +107,7 @@ class LocalPolicy:
         inf_time_proprio_dropout: Optional[float] = 0.0,
         n_ds_steps: Optional[int] = 0,
         num_diffusion_steps: Optional[int] = None,
+        control_mode: Optional[str] = "temporal_ensemble",
         **kwargs,
     ) -> None:
         self.action_dim = action_dim
@@ -111,7 +118,7 @@ class LocalPolicy:
         if policy_config is not None and policy_dir is not None and task_name is not None:
             if self.use_dataset_inputs or self.use_dataset_inputs_proprio_only or self.n_ds_steps > 0:
                 self.dataset_policy = LookupPolicy(policy_config=policy_config, task_name=task_name)
-            self.policy = load_policy(policy_config, policy_dir, inf_time_proprio_dropout, num_diffusion_steps)
+            self.policy = load_policy(policy_config, policy_dir, inf_time_proprio_dropout, num_diffusion_steps, control_mode)
         else:
             self.policy = None  # To be set later
         self.prompt = prompt

@@ -25,3 +25,4 @@ use_dataset_inputs_proprio_only: false  # whether to use dataset inputs for the 
 test_hidden: false  # [Internal use only] whether to eval on hidden test instances
 prompt: null  # prompt to use for the policy
 num_diffusion_steps: 10  # number of diffusion steps to use for the policy
+control_mode: temporal_ensemble  # control mode to use for the policy

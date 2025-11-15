@@ -278,6 +278,7 @@ class Evaluator:
             "inf_time_proprio_dropout": self.cfg.inf_time_proprio_dropout,
             "n_ds_steps": self.cfg.n_ds_steps,
             "num_diffusion_steps": self.cfg.num_diffusion_steps,
+            "control_mode": self.cfg.control_mode,
         })
         logger.info("")
         logger.info("=" * 50)
