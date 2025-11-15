@@ -36,7 +36,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.p
     inf_time_proprio_dropout=0.0 \
     num_diffusion_steps=10 \
     control_mode=receeding_temporal \
-    log_path="${LOG_DIR}/${EXP_NAME}_test_10_steps_receeding_temporal"
+    log_path="${LOG_DIR}/test_10_steps_receeding_temporal"
 
 # XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
 #     ${POLICY_ARGS} \
@@ -48,4 +48,4 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.p
 #     n_ds_steps=2300 \
 #     num_diffusion_steps=10 \
 #     inf_time_proprio_dropout=0.0 \
-#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.0_pd_2200_ds"
+#     log_path="${LOG_DIR}/mbts_train_0.0_pd_2200_ds"
