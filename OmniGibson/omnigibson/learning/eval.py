@@ -573,11 +573,17 @@ if __name__ == "__main__":
     with Evaluator(config) as evaluator:
         logger.info("Starting evaluation...")
 
+        eval_instance_ids = (
+            config.eval_instance_ids
+            if config.eval_instance_ids is not None
+            else list(range(len(instances_to_run)))
+        )
+
         # Add tqdm for the number of instances_to_run
-        for idx, episode_number in tqdm(zip(instances_to_run, config.eval_instance_ids), desc="Instances"):
+        for idx, episode_number in tqdm(zip(instances_to_run, eval_instance_ids), desc="Instances"):
             evaluator.reset()
             evaluator.load_task_instance(idx, test_hidden=config.test_hidden)
-            logger.info(f"Starting task instance {idx} for evaluation...")
+            logger.info(f"Starting task instance {idx} for evaluation (instance {episode_number})...")
             for epi in range(m.NUM_EVAL_EPISODES):
                 evaluator.reset()
                 evaluator.policy.set_task_instance(episode_number)

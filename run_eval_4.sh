@@ -11,7 +11,8 @@ export OMNIGIBSON_DATA_PATH=/opt/BEHAVIOR-1K/datasets;
 
 ########################################################
 #
-# Will keep the default 10 diffusion steps but using receeding_temporal control mode
+# Will keep the default 10 diffusion steps but using receeding_temporal control mode and only running on 4 instances
+# and 18k simulator steps to make it a bit faster to make sure the 2nd experiment below gets to run as well
 #
 ########################################################
 
@@ -30,13 +31,13 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.p
     ${POLICY_ARGS} \
     task.name=moving_boxes_to_storage \
     eval_on_train_instances=false \
-    eval_instance_ids=[0,1,2,3,4,5,6] \
+    eval_instance_ids=[0,1,2,3] \
     use_heavy_robot=true \
-    max_steps=5400 \
+    max_steps=18000 \
     inf_time_proprio_dropout=0.0 \
     num_diffusion_steps=10 \
     control_mode=receeding_temporal \
-    log_path="${LOG_DIR}/test_10_steps_receeding_temporal_fixed"
+    log_path="${LOG_DIR}/test_10_steps_receeding_temporal_fixed_FOR_REAL"
 
 ########################################################
 #
