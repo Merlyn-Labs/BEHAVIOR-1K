@@ -440,17 +440,293 @@ export B1K_EVAL_TIME=true
 #     inf_time_proprio_dropout=0.2 \
 #     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
 
-# –––––– Model 11 ––––––
-aws s3 sync \
-    s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251112_214833/96000/ \
-    /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251112_214833/96000/
+# # –––––– Model 11 ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251112_214833/96000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251112_214833/96000/
 
-EXP_NAME="openpi_05_20251112_214833_mbts_96k_steps"
+# EXP_NAME="openpi_05_20251112_214833_mbts_96k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_single_task_focus_on_boundaries policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251112_214833/96000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2500 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+
+# # –––––– Model 12 ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/17000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/17000/
+
+# EXP_NAME="openpi_05_20251113_045215_17k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/17000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2500 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
+
+# # –––––– For Debugging  ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/39000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/39000/
+
+# EXP_NAME="openpi_05_20251113_045215_39k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/39000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2500 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
+
+# # –––––– Model 13 ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/42000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/42000/
+
+# EXP_NAME="openpi_05_20251113_045215_42k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/42000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2500 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
+
+# # –––––– Model 14 ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/48000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/48000/
+
+# EXP_NAME="openpi_05_20251113_045215_48k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/48000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2500 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
+
+# # –––––– Model 15 ––––––
+# sleep 6h
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/69000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/69000/
+
+# EXP_NAME="openpi_05_20251113_045215_69k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_22_TASKS_oversample/openpi_05_20251113_045215/69000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1,2] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2500 \
+#     inf_time_proprio_dropout=0.2 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
+
+# # –––––– Model 16 ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/24000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/24000/
+
+# EXP_NAME="openpi_05_20251114_055221_24k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/24000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=7000 \
+#     inf_time_proprio_dropout=0.0 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.0_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2300 \
+#     inf_time_proprio_dropout=0.0 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.0_pd_2200_ds"
+
+# # –––––– Model 17 ––––––
+# aws s3 sync \
+#     s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/45000/ \
+#     /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/45000/
+
+# EXP_NAME="openpi_05_20251114_055221_45k_steps"
+# LOG_DIR="video_outputs/${EXP_NAME}"
+
+# mkdir -p "${LOG_DIR}"
+
+# POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/45000/"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=false \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=7000 \
+#     inf_time_proprio_dropout=0.0 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.0_pd"
+
+# XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+#     ${POLICY_ARGS} \
+#     task.name=moving_boxes_to_storage \
+#     eval_on_train_instances=true \
+#     eval_instance_ids=[0,1] \
+#     use_heavy_robot=true \
+#     max_steps=9000 \
+#     n_ds_steps=2300 \
+#     inf_time_proprio_dropout=0.0 \
+#     log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.0_pd_2200_ds"
+
+# –––––– Model 18 ––––––
+aws s3 sync \
+    s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/63000/ \
+    /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/63000/
+
+EXP_NAME="openpi_05_20251114_055221_63k_steps"
 LOG_DIR="video_outputs/${EXP_NAME}"
 
 mkdir -p "${LOG_DIR}"
 
-POLICY_ARGS="policy=local policy_config=pi05_single_task_focus_on_boundaries policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251112_214833/96000/"
+POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample/openpi_05_20251114_055221/63000/"
+
+XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
+    ${POLICY_ARGS} \
+    task.name=moving_boxes_to_storage \
+    eval_on_train_instances=false \
+    eval_instance_ids=[0,1] \
+    use_heavy_robot=true \
+    max_steps=7000 \
+    inf_time_proprio_dropout=0.0 \
+    num_diffusion_steps=10 \
+    log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.0_pd"
 
 XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
     ${POLICY_ARGS} \
@@ -459,16 +735,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.p
     eval_instance_ids=[0,1] \
     use_heavy_robot=true \
     max_steps=9000 \
-    n_ds_steps=2500 \
-    inf_time_proprio_dropout=0.2 \
-    log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.2_pd_2500_ds"
-
-XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
-    ${POLICY_ARGS} \
-    task.name=moving_boxes_to_storage \
-    eval_on_train_instances=false \
-    eval_instance_ids=[0,1,2] \
-    use_heavy_robot=true \
-    max_steps=9000 \
-    inf_time_proprio_dropout=0.2 \
-    log_path="${LOG_DIR}/${EXP_NAME}_mbts_test_0.2_pd"
+    n_ds_steps=2300 \
+    num_diffusion_steps=10 \
+    inf_time_proprio_dropout=0.0 \
+    log_path="${LOG_DIR}/${EXP_NAME}_mbts_train_0.0_pd_2200_ds"
