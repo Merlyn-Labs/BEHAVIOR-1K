@@ -234,8 +234,8 @@ fi
 # Install BDDL
 if [ "$BDDL" = true ]; then
     echo "Installing BDDL..."
-    [ ! -d "bddl" ] && { echo "ERROR: bddl directory not found"; exit 1; }
-    pip install -e "$WORKDIR/bddl"
+    [ ! -d "bddl_alt" ] && { echo "ERROR: bddl_alt directory not found"; exit 1; }
+    pip install -e "$WORKDIR/bddl_alt"
 fi
 
 # Install OmniGibson with Isaac Sim

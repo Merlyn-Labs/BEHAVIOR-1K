@@ -6,7 +6,7 @@ conda activate behavior
 echo $CONDA_DEFAULT_ENV
 
 pip install "numpy<2" "setuptools<=79"
-CUDA_VER_SHORT=$(echo $CUDA_VERSION | sed 's/\.//g')
+CUDA_VER_SHORT=$(echo $CUDA_VERSION | grep -oE '^[0-9]+\.[0-9]+' | sed 's/\.//')
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu${CUDA_VER_SHORT}
 
 ./setup.sh --omnigibson --bddl --joylo --dataset --eval --primitives --accept-conda-tos --accept-nvidia-eula --accept-dataset-tos
