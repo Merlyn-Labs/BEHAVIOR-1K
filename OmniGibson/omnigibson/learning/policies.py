@@ -64,6 +64,9 @@ def load_policy(
     inf_time_proprio_dropout: float,
     num_diffusion_steps: int,
     control_mode: str = "temporal_ensemble",
+    replan_interval: Optional[int] = 1,
+    max_predictions: Optional[int] = 10,
+    exp_k_value: Optional[float] = 0.005,
 ):
     logging.info(f"Using policy config: {policy_config}")
     logging.info(f"Using policy dir: {policy_dir}")
@@ -84,7 +87,14 @@ def load_policy(
         }
     )
     # policy = _policy.PolicyRecorder(policy, "policy_records")
-    policy = B1KPolicyWrapper(policy, config=updated_config, control_mode=control_mode)
+    policy = B1KPolicyWrapper(
+        policy,
+        config=updated_config,
+        control_mode=control_mode,
+        replan_interval=replan_interval,
+        max_predictions=max_predictions,
+        exp_k_value=exp_k_value,
+    )
     return policy
 
 
@@ -108,6 +118,9 @@ class LocalPolicy:
         n_ds_steps: Optional[int] = 0,
         num_diffusion_steps: Optional[int] = None,
         control_mode: Optional[str] = "temporal_ensemble",
+        replan_interval: Optional[int] = 1,
+        max_predictions: Optional[int] = 10,
+        exp_k_value: Optional[float] = 0.005,
         **kwargs,
     ) -> None:
         self.action_dim = action_dim
@@ -118,7 +131,16 @@ class LocalPolicy:
         if policy_config is not None and policy_dir is not None and task_name is not None:
             if self.use_dataset_inputs or self.use_dataset_inputs_proprio_only or self.n_ds_steps > 0:
                 self.dataset_policy = LookupPolicy(policy_config=policy_config, task_name=task_name)
-            self.policy = load_policy(policy_config, policy_dir, inf_time_proprio_dropout, num_diffusion_steps, control_mode)
+            self.policy = load_policy(
+                policy_config=policy_config,
+                policy_dir=policy_dir,
+                inf_time_proprio_dropout=inf_time_proprio_dropout,
+                num_diffusion_steps=num_diffusion_steps,
+                control_mode=control_mode,
+                replan_interval=replan_interval,
+                max_predictions=max_predictions,
+                exp_k_value=exp_k_value,
+            )
         else:
             self.policy = None  # To be set later
         self.prompt = prompt

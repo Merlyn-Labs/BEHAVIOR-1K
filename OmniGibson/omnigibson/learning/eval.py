@@ -279,6 +279,9 @@ class Evaluator:
             "n_ds_steps": self.cfg.n_ds_steps,
             "num_diffusion_steps": self.cfg.num_diffusion_steps,
             "control_mode": self.cfg.control_mode,
+            "replan_interval": self.cfg.replan_interval,
+            "max_predictions": self.cfg.max_predictions,
+            "exp_k_value": self.cfg.exp_k_value,
         })
         logger.info("")
         logger.info("=" * 50)
