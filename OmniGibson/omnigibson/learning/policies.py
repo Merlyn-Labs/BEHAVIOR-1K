@@ -64,8 +64,9 @@ def load_policy(
     inf_time_proprio_dropout: float,
     num_diffusion_steps: int,
     control_mode: str = "temporal_ensemble",
-    replan_interval: Optional[int] = 1,
-    max_predictions: Optional[int] = 10,
+    action_horizon: int = 10,
+    max_len: int = 10,
+    temporal_ensemble_max: int = 10,
     exp_k_value: Optional[float] = 0.005,
 ):
     logging.info(f"Using policy config: {policy_config}")
@@ -91,8 +92,9 @@ def load_policy(
         policy,
         config=updated_config,
         control_mode=control_mode,
-        replan_interval=replan_interval,
-        max_predictions=max_predictions,
+        action_horizon=action_horizon,
+        max_len=max_len,
+        temporal_ensemble_max=temporal_ensemble_max,
         exp_k_value=exp_k_value,
     )
     return policy
