@@ -26,6 +26,7 @@ test_hidden: false  # [Internal use only] whether to eval on hidden test instanc
 prompt: null  # prompt to use for the policy
 num_diffusion_steps: 10  # number of diffusion steps to use for the policy
 control_mode: temporal_ensemble  # control mode to use for the policy (doesn't actually do anything)
-replan_interval: 1  # how often to query the policy model
-max_predictions: 10  # max number of predictions to keep for averaging
+action_horizon: 10  # how often to query the policy model
+max_len: 10  # max length of the policy sequence
+temporal_ensemble_max: 10  # max number of sequences to ensemble (ONLY USED FOR RECEEDING TEMPORAL)
 exp_k_value: 0.005  # k value for the exponential weighting
