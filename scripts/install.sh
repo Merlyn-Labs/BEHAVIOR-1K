@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# curl -LsSf https://astral.sh/uv/install.sh | sh
+# source $HOME/.local/bin/env
+# wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && bash Miniconda3-latest-Linux-x86_64.sh -b && ~/miniconda3/bin/conda init bash && source ~/.bashrc && rm Miniconda3-latest-Linux-x86_64.sh
+
 conda create -n behavior python=3.10 -c conda-forge -y
 eval "$(conda shell.bash hook)"
 conda activate behavior
