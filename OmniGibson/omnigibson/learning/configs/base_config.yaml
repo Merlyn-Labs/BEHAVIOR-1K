@@ -30,3 +30,5 @@ action_horizon: 10  # how often to query the policy model
 max_len: 10  # max length of the policy sequence
 temporal_ensemble_max: 10  # max number of sequences to ensemble (ONLY USED FOR RECEEDING TEMPORAL)
 exp_k_value: 0.005  # k value for the exponential weighting
+websockets_host: 0.0.0.0  # host to connect to the websocket server
+websockets_port: 8000  # port to connect to the websocket server

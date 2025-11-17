@@ -205,10 +205,13 @@ class WebsocketPolicy:
         host: Optional[str] = None,
         port: Optional[int] = None,
         prompt: Optional[str] = None,
+        websockets_host: Optional[str] = None,
+        websockets_port: Optional[int] = None,
         **kwargs,
     ) -> None:
-        logging.info(f"Creating websocket client policy with host: {host}, port: {port}")
-        self.policy = WebsocketClientPolicy(host=host, port=port)
+        logging.info(f"Creating websocket client policy with host: {websockets_host}, port: {websockets_port}")
+        print(f"Creating websocket client policy with host: {websockets_host}, port: {websockets_port}")
+        self.policy = WebsocketClientPolicy(host=websockets_host, port=websockets_port)
         self.prompt = prompt
 
     def forward(self, obs: dict, *args, **kwargs) -> th.Tensor:

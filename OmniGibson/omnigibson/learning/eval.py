@@ -107,10 +107,10 @@ class Evaluator:
         self.total_time = 0
         self.robot_action = dict()
 
-        self.policy = self.load_policy()
-        logger.info("Policy fully loaded")
         self.env = self.load_env(env_wrapper=self.cfg.env_wrapper)
         logger.info("Env fully loaded")
+        self.policy = self.load_policy()
+        logger.info("Policy fully loaded")
         self.robot = self.load_robot()
         logger.info("Robot fully loaded")
         self.metrics = self.load_metrics()
@@ -283,6 +283,8 @@ class Evaluator:
             "max_len": self.cfg.max_len,
             "temporal_ensemble_max": self.cfg.temporal_ensemble_max,
             "exp_k_value": self.cfg.exp_k_value,
+            "websockets_host": self.cfg.websockets_host,
+            "websockets_port": self.cfg.websockets_port,
         })
         logger.info("")
         logger.info("=" * 50)
