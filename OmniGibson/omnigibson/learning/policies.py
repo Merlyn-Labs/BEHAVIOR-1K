@@ -11,7 +11,7 @@ from omnigibson.learning.datas import BehaviorLerobotDatasetMetadata, BehaviorLe
 
 from openpi.policies import policy as _policy
 from openpi.policies import policy_config as _policy_config
-from openpi.shared.eval_b1k_wrapper import B1KPolicyWrapper
+from openpi.shared.og_eval_b1k_wrapper import OGB1KPolicyWrapper
 from openpi.training import config as _config
 
 OBS_TO_DP_MAPPING = {
@@ -88,7 +88,7 @@ def load_policy(
         }
     )
     # policy = _policy.PolicyRecorder(policy, "policy_records")
-    policy = B1KPolicyWrapper(
+    policy = OGB1KPolicyWrapper(
         policy,
         config=updated_config,
         control_mode=control_mode,

@@ -5,37 +5,45 @@ eval "$(conda shell.bash hook)"
 conda deactivate
 conda activate behavior
 
+# Trying k = 0.8 here
+
 export CUDA_VISIBLE_DEVICES=2;
 export B1K_EVAL_TIME=true;
 export OMNIGIBSON_DATA_PATH=/opt/BEHAVIOR-1K/datasets;
 
-########################################################
-#
-# Receeding_temporal but close to current best. Also using hopefully godly 78k steps checkpoint.
-#
-########################################################
+export TRAIN_CONFIG_NAME="pi05_b1k_22_TASKS_oversample";
+export CKPT_NAME="openpi_05_20251113_045215";
+export STEP_COUNT=81000;
+export TASK_NAME="make_pizza";
+
+export CONTROL_MODE="receeding_temporal";
+export MAX_LEN=72;
+export ACTION_HORIZON=12;
+export TEMPORAL_ENSEMBLE_MAX=6;
+export EXP_K_VALUE=0.8;
 
 aws s3 sync \
-    s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/ \
-    /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/
+    s3://behavior-challenge/outputs/checkpoints/${TRAIN_CONFIG_NAME}/${CKPT_NAME}/${STEP_COUNT}/ \
+    /workspace/openpi/outputs/checkpoints/${TRAIN_CONFIG_NAME}/${CKPT_NAME}/${STEP_COUNT}/
 
-EXP_NAME="openpi_05_20251115_045832_78k_steps"
-LOG_DIR="video_outputs_new/${EXP_NAME}"
+export EXP_NAME="${TASK_NAME}_FINAL_option_2";
+export LOG_DIR="final_video_outputs/${EXP_NAME}";
 
-mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}";
 
-POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/"
+export POLICY_ARGS="policy=local policy_config=pi05_b1k_inference_final policy_dir=/workspace/openpi/outputs/checkpoints/${TRAIN_CONFIG_NAME}/${CKPT_NAME}/${STEP_COUNT}";
 
 XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
     ${POLICY_ARGS} \
-    task.name=moving_boxes_to_storage \
+    task.name="${TASK_NAME}" \
     eval_on_train_instances=false \
+    eval_instance_ids=[0,1,2,3,4,5,6,7,8,9] \
     use_heavy_robot=true \
     inf_time_proprio_dropout=0.0 \
     num_diffusion_steps=10 \
-    max_steps=15000 \
-    control_mode=receeding_temporal \
-    replan_interval=10 \
-    max_predictions=5 \
-    exp_k_value=0.05 \
-    log_path="${LOG_DIR}/receeding_temporal_close_to_current_best"
+    control_mode=${CONTROL_MODE} \
+    action_horizon=${ACTION_HORIZON} \
+    max_len=${MAX_LEN} \
+    temporal_ensemble_max=${TEMPORAL_ENSEMBLE_MAX} \
+    exp_k_value=${EXP_K_VALUE} \
+    log_path="${LOG_DIR}/k_${EXP_K_VALUE}"

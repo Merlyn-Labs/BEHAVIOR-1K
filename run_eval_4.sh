@@ -11,21 +11,25 @@ export OMNIGIBSON_DATA_PATH=/opt/BEHAVIOR-1K/datasets;
 
 ########################################################
 #
-# Receeding_temporal and close to current best, but more unencumbered by old predicted actions.
-# Also using hopefully godly 78k steps checkpoint.
+# Experiment group 3, iteration 0
+# - control_mode=receeding_horizon
+# - action_horizon=128    # THE THING BEING TESTED HERE
+# - max_len=128    # THE THING BEING TESTED HERE
+# - temporal_ensemble_max=1
+# - exp_k_value=1.0
 #
 ########################################################
 
 aws s3 sync \
-    s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/ \
-    /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/
+    s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/36000/ \
+    /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/36000/
 
-EXP_NAME="openpi_05_20251115_045832_78k_steps"
-LOG_DIR="video_outputs_new/${EXP_NAME}"
+EXP_NAME="openpi_05_20251115_045832_36k_steps"
+LOG_DIR="video_outputs_lium-ada-v1/${EXP_NAME}"
 
 mkdir -p "${LOG_DIR}"
 
-POLICY_ARGS="policy=local policy_config=pi05_b1k_22_TASKS_oversample policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/"
+POLICY_ARGS="policy=local policy_config=pi05_b1k_oversample_mbts policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/36000"
 
 XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
     ${POLICY_ARGS} \
@@ -34,9 +38,10 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.p
     use_heavy_robot=true \
     inf_time_proprio_dropout=0.0 \
     num_diffusion_steps=10 \
-    max_steps=15000 \
-    control_mode=receeding_temporal \
-    replan_interval=10 \
-    max_predictions=3 \
-    exp_k_value=0.05 \
-    log_path="${LOG_DIR}/receeding_temporal_more_unencumbered"
+    max_steps=18000 \
+    control_mode=receeding_horizon \
+    action_horizon=128 \
+    max_len=128 \
+    temporal_ensemble_max=1 \
+    exp_k_value=1.0 \
+    log_path="${LOG_DIR}/receeding_horizon_128_steps"
