@@ -18,3 +18,5 @@ pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https
 python -m pip install -e /workspace/openpi/packages/openpi-client/
 python -m pip install -e /workspace/openpi/
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu${CUDA_VER_SHORT}
+
+apt -y update && apt install -y libsm6 libxext6 libxrender-dev libxt6 libglu1-mesa libice6 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxinerama1 libxcursor1 libxi6 libxtst6 libegl1 libopengl0 libglvnd0 libglx0 libgl1 libgtk-3-0 libnss3 xvfb libvulkan1 mesa-vulkan-drivers vulkan-tools

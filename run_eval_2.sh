@@ -5,29 +5,28 @@ eval "$(conda shell.bash hook)"
 conda deactivate
 conda activate behavior
 
-# Trying k = 0.5 here
-
+# Trying k = 0.2 with RT 20 @ 100
 export CUDA_VISIBLE_DEVICES=1;
 export B1K_EVAL_TIME=true;
-export OMNIGIBSON_DATA_PATH=/opt/BEHAVIOR-1K/datasets;
+# export OMNIGIBSON_DATA_PATH=/opt/BEHAVIOR-1K/datasets;
 
-export TRAIN_CONFIG_NAME="pi05_b1k_22_TASKS_oversample";
-export CKPT_NAME="openpi_05_20251113_045215";
-export STEP_COUNT=81000;
-export TASK_NAME="make_pizza";
+export TRAIN_CONFIG_NAME="pi05_b1k_oversample_mbts";
+export CKPT_NAME="openpi_05_20251115_045832";
+export STEP_COUNT=36000;
+export TASK_NAME="moving_boxes_to_storage";
 
 export CONTROL_MODE="receeding_temporal";
-export MAX_LEN=72;
-export ACTION_HORIZON=12;
-export TEMPORAL_ENSEMBLE_MAX=6;
-export EXP_K_VALUE=0.5;
+export MAX_LEN=100;
+export ACTION_HORIZON=20;
+export TEMPORAL_ENSEMBLE_MAX=5;
+export EXP_K_VALUE=0.2;
 
 aws s3 sync \
     s3://behavior-challenge/outputs/checkpoints/${TRAIN_CONFIG_NAME}/${CKPT_NAME}/${STEP_COUNT}/ \
     /workspace/openpi/outputs/checkpoints/${TRAIN_CONFIG_NAME}/${CKPT_NAME}/${STEP_COUNT}/
 
-export EXP_NAME="${TASK_NAME}_FINAL_option_2";
-export LOG_DIR="final_video_outputs/${EXP_NAME}";
+export EXP_NAME="${TASK_NAME}";
+export LOG_DIR="mbts_control_modes/${EXP_NAME}";
 
 mkdir -p "${LOG_DIR}";
 
