@@ -4,17 +4,18 @@
 # source $HOME/.local/bin/env
 # wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && bash Miniconda3-latest-Linux-x86_64.sh -b && ~/miniconda3/bin/conda init bash && source ~/.bashrc && rm Miniconda3-latest-Linux-x86_64.sh
 
-conda create -n behavior python=3.10 -c conda-forge -y
-eval "$(conda shell.bash hook)"
-conda activate behavior
-echo $CONDA_DEFAULT_ENV
+# conda create -n behavior python=3.10 -c conda-forge -y
+# eval "$(conda shell.bash hook)"
+# conda activate behavior
+# echo $CONDA_DEFAULT_ENV
 
-python -m pip install uv
-python -m uv pip install "numpy<2" "setuptools<=79"
-CUDA_VER_SHORT=$(echo $CUDA_VERSION | grep -oE '^[0-9]+\.[0-9]+' | sed 's/\.//')
+# python -m pip install uv
+# python -m uv pip install "numpy<2" "setuptools<=79"
+# CUDA_VER_SHORT=$(echo $CUDA_VERSION | grep -oE '^[0-9]+\.[0-9]+' | sed 's/\.//')
+CUDA_VER_SHORT=128
 python -m uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu${CUDA_VER_SHORT}
 
-./setup.sh --omnigibson --bddl --joylo --dataset --eval --primitives --accept-conda-tos --accept-nvidia-eula --accept-dataset-tos
+./setup.sh --omnigibson --bddl --joylo --accept-conda-tos --accept-nvidia-eula --accept-dataset-tos
 
 python -m uv pip install -e /workspace/openpi/packages/openpi-client/
 python -m uv pip install -e /workspace/openpi/
