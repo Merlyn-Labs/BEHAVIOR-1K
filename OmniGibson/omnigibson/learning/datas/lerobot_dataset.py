@@ -548,24 +548,6 @@ class BehaviorLeRobotDataset(LeRobotDataset):
 
         return self._skill_prompts_cache[ep_idx]
 
-    # def _load_episode_annotations(self, ep_idx: int) -> dict | None:
-    #     """
-    #     Lazy-load and cache per-episode annotations based on annotations
-    #     Returns annotations or None
-    #     """
-    #     if ep_idx not in self._annotations_cache:
-    #         annotations = None
-    #         try:
-    #             annotations_path = self.root / self.meta.get_annotation_path(ep_idx)
-    #             if annotations_path.is_file():
-    #                 with open(annotations_path, "r") as f:
-    #                     annotations = json.load(f)
-    #         except (KeyError, FileNotFoundError, json.JSONDecodeError):
-    #             annotations = None
-    #         self._annotations_cache[ep_idx] = annotations
-
-    #     return self._annotations_cache[ep_idx]
-
     def _get_query_indices(self, idx: int, ep_idx: int) -> tuple[dict[str, list[int | bool]]]:
         ep_idx = self.episode_data_index_pos[ep_idx]
         ep_start = self.episode_data_index["from"][ep_idx]

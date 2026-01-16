@@ -19,7 +19,7 @@ from google.oauth2.service_account import Credentials
 from omnigibson.learning.utils.eval_utils import TASK_NAMES_TO_INDICES
 from urllib.parse import urlparse
 
-VALID_USER_NAME = ["wsai", "yinhang", "svl", "wsai-yfj", "wpai", "qinengw", "jdw"]
+VALID_USER_NAME = []  # Add authorized usernames here
 
 
 def makedirs_with_mode(path, mode=0o2775) -> None:
@@ -68,7 +68,7 @@ def get_credentials(credentials_path: str = "~/Documents/credentials") -> Tuple[
 
     # fetch lightwheel API token
     LIGHTWHEEL_API_FILE = f"{credentials_path}/lightwheel_credentials.json"
-    LIGHTWHEEL_LOGIN_URL = "http://authserver.lightwheel.net/api/authenticate/v1/user/login"
+    LIGHTWHEEL_LOGIN_URL = os.environ.get("LIGHTWHEEL_LOGIN_URL", "")
     with open(LIGHTWHEEL_API_FILE, "r") as f:
         lightwheel_api_credentials = json.load(f)
 
@@ -142,7 +142,8 @@ def get_all_instance_id_for_task(lw_token: str, lightwheel_api_credentials: dict
         "page": 1,
         "pageSize": 300,
     }
-    response = requests.post("https://assetserver.lightwheel.net/api/asset/v1/task/get", headers=header, json=body)
+    asset_server_url = os.environ.get("LIGHTWHEEL_ASSET_SERVER_URL", "")
+    response = requests.post(f"{asset_server_url}/api/asset/v1/task/get", headers=header, json=body)
     response.raise_for_status()
     return [(item["level2"], item["resourceUuid"]) for item in response.json().get("data", [])]
 
@@ -162,8 +163,9 @@ def get_urls_from_lightwheel(uuids: List[str], lightwheel_api_credentials: dict,
         "Authorization": lw_token,
     }
     body = {"versionUuids": uuids, "projectUuid": lightwheel_api_credentials["projectUuid"]}
+    asset_server_url = os.environ.get("LIGHTWHEEL_ASSET_SERVER_URL", "")
     response = requests.post(
-        "https://assetserver.lightwheel.net/api/asset/v1/teleoperation/download", headers=header, json=body
+        f"{asset_server_url}/api/asset/v1/teleoperation/download", headers=header, json=body
     )
     response.raise_for_status()
     urls = [res["files"][0]["url"] for res in response.json()["downloadInfos"]]
@@ -775,17 +777,4 @@ def update_tracking_sheet(
 
 
 if __name__ == "__main__":
-    # check_leaf_folders_have_n("~/behavior", 200)
-    # gc = get_credentials("~/Documents/credentials")[0]
-    # tracking_spreadsheet = gc.open("B1K Challenge 2025 Data Replay Tracking Sheet")
-    # misc_sheet = gc.open("B50 Task Misc")
-    # misc_ws = misc_sheet.worksheet("Test Instances")
-    # misc_values = misc_ws.get_all_values()
-    # for task_name, task_index in tqdm(TASK_NAMES_TO_INDICES.items()):
-    #     task_ws = tracking_spreadsheet.worksheet(f"{task_index} - {task_name}")
-    #     assign_test_instances(task_ws, misc_ws, misc_values)
-    #     time.sleep(1)
-    # extract_annotations(
-    #     "/scr/behavior/2025-challenge-demos", "/home/svl/Downloads/annotations", remove_memory_prefix=True
-    # )
     og.shutdown()

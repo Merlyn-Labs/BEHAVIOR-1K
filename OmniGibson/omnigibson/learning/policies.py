@@ -87,7 +87,6 @@ def load_policy(
             "num_steps": num_diffusion_steps,
         }
     )
-    # policy = _policy.PolicyRecorder(policy, "policy_records")
     policy = OGB1KPolicyWrapper(
         policy,
         config=updated_config,

@@ -12,7 +12,7 @@ login(token=credentials["token"])
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--folder_path", type=str, default="/scr/behavior/2025-challenge-demos")
+parser.add_argument("--folder_path", type=str, required=True, help="Path to B1K dataset root")
 parser.add_argument("--task_id", type=int, required=True)
 args = parser.parse_args()
 

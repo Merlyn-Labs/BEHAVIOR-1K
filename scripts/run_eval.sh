@@ -1,37 +1,38 @@
 #!/bin/bash
+# Example evaluation script for B1K policy evaluation
+#
+# Usage:
+#   ./run_eval.sh --task moving_boxes_to_storage --ckpt-dir /path/to/checkpoint
+#
+# Required environment variables:
+#   OPENPI_CKPT_ROOT: Root directory for checkpoints (default: ./outputs/checkpoints)
 
-deactivate
+set -e
+
+# Parse arguments
+TASK_NAME="${TASK_NAME:-moving_boxes_to_storage}"
+CKPT_DIR="${CKPT_DIR:-${OPENPI_CKPT_ROOT:-./outputs/checkpoints}/pi05_b1k/latest}"
+CONTROL_MODE="${CONTROL_MODE:-receeding_horizon}"
+NUM_DIFFUSION_STEPS="${NUM_DIFFUSION_STEPS:-10}"
+LOG_DIR="${LOG_DIR:-video_outputs}"
+
+# Activate conda environment
 eval "$(conda shell.bash hook)"
-conda deactivate
 conda activate behavior
 
-export CUDA_VISIBLE_DEVICES=0;
-export B1K_EVAL_TIME=true;
-# export OMNIGIBSON_DATA_PATH=/opt/BEHAVIOR-1K/datasets;
-
-########################################################
-#
-# Trying control_mode = receeding_horizon for hella steps and on hella instances
-#
-########################################################
-
-aws s3 sync \
-    s3://behavior-challenge/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/ \
-    /workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/
-
-EXP_NAME="openpi_05_20251115_045832_78k_steps"
-LOG_DIR="video_outputs_uk/${EXP_NAME}"
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+export B1K_EVAL_TIME=true
 
 mkdir -p "${LOG_DIR}"
 
-POLICY_ARGS="policy=local policy_config=pi05_b1k_oversample_mbts policy_dir=/workspace/openpi/outputs/checkpoints/pi05_b1k_oversample_mbts/openpi_05_20251115_045832/78000/"
+POLICY_ARGS="policy=local policy_config=pi05_b1k policy_dir=${CKPT_DIR}"
 
 XLA_PYTHON_CLIENT_PREALLOCATE=false python OmniGibson/omnigibson/learning/eval.py \
     ${POLICY_ARGS} \
-    task.name=moving_boxes_to_storage \
+    task.name=${TASK_NAME} \
     eval_on_train_instances=false \
     use_heavy_robot=true \
     inf_time_proprio_dropout=0.0 \
-    num_diffusion_steps=10 \
-    control_mode=receeding_horizon \
-    log_path="${LOG_DIR}/test_10_steps_receeding_horizon"
+    num_diffusion_steps=${NUM_DIFFUSION_STEPS} \
+    control_mode=${CONTROL_MODE} \
+    log_path="${LOG_DIR}/${TASK_NAME}_${CONTROL_MODE}"
