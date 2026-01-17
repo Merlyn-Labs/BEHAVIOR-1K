@@ -3,7 +3,7 @@
 
 ![BEHAVIOR-1K](./docs/assets/readme_splash_logo.png)
 
-> Originally forked from [Physical-Intelligence/openpi](https://github.com/Physical-Intelligence/openpi) and extended for the [BEHAVIOR-1K Challenge 2025](https://behavior.stanford.edu/).
+> Originally forked from [StanfordVL/BEHAVIOR-1K](https://github.com/StanfordVL/BEHAVIOR-1K) and extended for the [BEHAVIOR-1K Challenge 2025](https://behavior.stanford.edu/).
 
 
 **BEHAVIOR-1K** is a comprehensive simulation benchmark for testing embodied AI agents on 1,000 everyday household activities. This monolithic repository provides everything needed to train and evaluate agents on human-centered tasks like cleaning, cooking, and organizing — activities selected from real human time-use surveys and preference studies.
