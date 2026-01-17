@@ -456,17 +456,20 @@ def main(random_selection=False, headless=False, short_exec=False):
                         feedback = error_msg
                         print("validation failed")
                         print(f"REASON: {feedback}")
+                        breakpoint()
 
                 if success:
                     env.scene.load_state(task_final_state)
                     env.scene.update_initial_file()
                     print("sampling succeed")
+                    breakpoint()
                     env.task.save_task(env=env, override=True, task_relevant_only=False, suffix=task_suffix)
                     og.log.info(f"\n\nSampling success: {activity}\n\n")
                     reason = ""
                 else:
                     reason = feedback
                     og.log.error(f"\n\nSampling failed: {activity}.\n\nFeedback: {reason}\n\n")
+                    breakpoint()
                 og.sim.stop()
             else:
                 og.log.error(f"\n\nSampling failed: {activity}.\n\nFeedback: {reason}\n\n")
@@ -508,6 +511,9 @@ def main(random_selection=False, headless=False, short_exec=False):
             traceback_str = f"{traceback.format_exc()}"
             og.log.error(traceback_str)
             og.log.error(f"\n\nCaught exception sampling activity {activity} in scene {args.scene_model}:\n\n{e}\n\n")
+
+            print("exception")
+            breakpoint()
 
             if not args.offline:
                 # Check if another thread succeeded already
