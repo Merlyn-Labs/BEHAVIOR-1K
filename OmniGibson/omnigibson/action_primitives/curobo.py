@@ -791,8 +791,6 @@ class CuRoboMotionGenerator:
             result, success, joint_state = plan_fn(
                 cu_js_batch, main_ik_goal_batch, plan_cfg, link_poses=ik_goal_batch_by_link, emb_sel=emb_sel
             )
-            if self.debug:
-                breakpoint()
 
             # Append results
             results.append(result)

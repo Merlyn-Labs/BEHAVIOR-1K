@@ -392,9 +392,7 @@ class OVXRSystem(TeleopSystem):
                 #     self.update()
                 #     # somehow, internally xr calls clear_controller_model(hand) which removes a prim from stage;
                 #     # note that this does not invalidate the physics sim view but instead removes the physics view from articulation views
-                #     breakpoint()
                 #     og.sim.step()
-                #     breakpoint()
                 print("[VRSys] VR system is ready")
                 self.register_head_canonical_transformation()
                 og.sim.step()
