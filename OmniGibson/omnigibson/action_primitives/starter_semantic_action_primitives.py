@@ -980,8 +980,6 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # Grab the first successful trajectory if found
         success_idx = th.where(successes)[0].cpu()
         if len(success_idx) == 0:
-            # print("motion planning fails")
-            # breakpoint()
             raise ActionPrimitiveError(
                 ActionPrimitiveError.Reason.PLANNING_ERROR,
                 "There is no accessible path from where you are to the desired pose. Try again",
@@ -1061,14 +1059,12 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                     if not base_target_reached:
                         indented_print(f"max base pos diff: {max_base_pos_diff}")
                         indented_print(f"max base angle diff: {max_base_orn_diff}")
-                        # breakpoint()
                         raise ActionPrimitiveError(
                             ActionPrimitiveError.Reason.EXECUTION_ERROR,
                             "Could not reach the target base joint positions. Try again",
                         )
                     if not articulation_target_reached:
                         indented_print(f"max articulation joint diff: {max_articulation_joint_diff}")
-                        # breakpoint()
                         raise ActionPrimitiveError(
                             ActionPrimitiveError.Reason.EXECUTION_ERROR,
                             "Could not reach the target articulation joint positions. Try again",
@@ -1575,8 +1571,6 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         target_pos = {self.robot.base_footprint_link_name: pose_3d[0]}
         target_quat = {self.robot.base_footprint_link_name: pose_3d[1]}
 
-        # print("base motion planning")
-        # breakpoint()
         q_traj = self._plan_joint_motion(
             target_pos,
             target_quat,
